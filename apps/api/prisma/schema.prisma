@@ -1,0 +1,185 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EventType {
+  FEED
+  DIAPER
+  SLEEP
+  MEDICINE
+  GROWTH
+  VACCINE
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  displayName   String
+  babies        Baby[]
+  events        Event[]
+  refreshTokens RefreshToken[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Baby {
+  id          String   @id @default(uuid())
+  name        String
+  nickname    String?
+  gender      Gender
+  birthday    DateTime
+  birthWeight Float?
+  birthHeight Float?
+  note        String?
+  archived    Boolean  @default(false)
+  ownerId     String
+  user        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  events      Event[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum FeedType {
+  BREASTFEEDING
+  BREAST_MILK_BOTTLE
+  FORMULA
+}
+
+enum DiaperStatus {
+  PEE
+  POOP
+  BOTH
+}
+
+enum PoopColor {
+  YELLOW
+  GREEN
+  BROWN
+  BLACK
+  WHITE
+  RED
+}
+
+enum PoopConsistency {
+  WATERY
+  SOFT
+  NORMAL
+  HARD
+  SEED_LIKE
+}
+
+enum PoopAmount {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+model Event {
+  id          String            @id @default(uuid())
+  babyId      String
+  baby        Baby              @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  type        EventType
+  occurredAt  DateTime
+  note        String            @default("")
+  createdBy   String
+  creator     User              @relation(fields: [createdBy], references: [id])
+  feedEvent   FeedEvent?
+  diaperEvent DiaperEvent?
+  auditLogs   EventAuditLog[]
+  attachments EventAttachment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([babyId])
+  @@index([babyId, type])
+  @@index([babyId, occurredAt])
+  @@index([occurredAt])
+}
+
+model FeedEvent {
+  id             String    @id @default(uuid())
+  eventId        String    @unique
+  event          Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  feedType       FeedType
+  leftDuration   Int?
+  rightDuration  Int?
+  preparedVolume Float?
+  consumedVolume Float?
+  brand          String?
+  stage          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model DiaperEvent {
+  id              String           @id @default(uuid())
+  eventId         String           @unique
+  event           Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status          DiaperStatus
+  poopColor       PoopColor?
+  poopConsistency PoopConsistency?
+  poopAmount      PoopAmount?
+  hasBlood        Boolean          @default(false)
+  hasMucus        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+
+model EventAuditLog {
+  id          String      @id @default(uuid())
+  eventId     String
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  action      AuditAction
+  performedBy String
+  oldValues   Json?
+  newValues   Json?
+  timestamp   DateTime    @default(now())
+
+  @@index([eventId])
+}
+
+model EventAttachment {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fileUrl   String
+  fileName  String
+  mimeType  String
+  sizeBytes Int
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+}
+
+
+
