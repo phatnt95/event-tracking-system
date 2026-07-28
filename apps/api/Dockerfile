@@ -38,12 +38,13 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
 RUN pnpm install --prod --ignore-scripts
+
+COPY --from=builder /usr/src/app/apps/api/prisma ./apps/api/prisma
 RUN pnpm --filter api prisma:generate
 
 # Copy build artifacts and prisma schema
 COPY --from=builder /usr/src/app/packages/shared-types/dist ./packages/shared-types/dist
 COPY --from=builder /usr/src/app/apps/api/dist ./apps/api/dist
-COPY --from=builder /usr/src/app/apps/api/prisma ./apps/api/prisma
 
 EXPOSE 3000
 CMD ["sh", "-c", "pnpm --filter api exec prisma migrate deploy && pnpm --filter api start:prod"]
