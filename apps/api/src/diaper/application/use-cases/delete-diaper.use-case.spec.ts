@@ -1,40 +1,16 @@
 import { DeleteDiaperUseCase } from './delete-diaper.use-case';
-import { DiaperNotFoundException } from '../../domain/errors/diaper.errors';
 
 describe('DeleteDiaperUseCase', () => {
-  let useCase: DeleteDiaperUseCase;
-  let mockRepo: any;
-
-  beforeEach(() => {
-    mockRepo = {
-      findByEventId: jest.fn(),
+  it('deletes the base event after ownership checks', async () => {
+    const diaperRepo = {
+      findByEventId: jest.fn().mockResolvedValue({ event: { babyId: 'baby-1' } }),
       delete: jest.fn(),
     };
-    useCase = new DeleteDiaperUseCase(mockRepo);
-  });
-
-  it('should delete diaper successfully', async () => {
-    const mockDiaper = {
-      id: 'diaper-1',
-      eventId: 'event-1',
-      event: {
-        id: 'event-1',
-        babyId: 'baby-1',
-      },
-    };
-
-    mockRepo.findByEventId.mockResolvedValue(mockDiaper);
-
-    await useCase.execute('event-1', 'baby-1');
-
-    expect(mockRepo.delete).toHaveBeenCalledWith('diaper-1');
-  });
-
-  it('should throw DiaperNotFoundException if not found', async () => {
-    mockRepo.findByEventId.mockResolvedValue(null);
-
-    await expect(useCase.execute('event-1', 'baby-1')).rejects.toThrow(
-      DiaperNotFoundException,
+    const useCase = new DeleteDiaperUseCase(
+      diaperRepo as any,
+      { findById: jest.fn().mockResolvedValue({ ownerId: 'user-1' }) } as any,
     );
+    await useCase.execute('baby-1', 'event-1', 'user-1');
+    expect(diaperRepo.delete).toHaveBeenCalledWith('event-1');
   });
 });

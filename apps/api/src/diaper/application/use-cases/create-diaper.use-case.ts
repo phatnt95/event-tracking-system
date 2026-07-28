@@ -1,57 +1,79 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { DiaperResponse, DiaperStatus } from '@baby-tracker/shared-types';
+import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
+import {
+  BabyNotFoundException,
+  ForbiddenBabyAccessException,
+} from '../../../babies/domain/errors/baby.errors';
 import { CreateDiaperDto } from '../dtos/create-diaper.dto';
-import { DiaperResponse, EventType, DiaperStatus } from '@baby-tracker/shared-types';
+import { DiaperEvent } from '../../domain/entities/diaper-event.entity';
+import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
 import { InvalidDiaperConfigurationException } from '../../domain/errors/diaper.errors';
 
 @Injectable()
 export class CreateDiaperUseCase {
   constructor(
-    @Inject('IDiaperEventRepository')
-    private readonly diaperEventRepository: IDiaperEventRepository,
+    @Inject(IDiaperEventRepository)
+    private readonly diaperRepo: IDiaperEventRepository,
+    @Inject(IBabyRepository)
+    private readonly babyRepo: IBabyRepository,
   ) {}
 
-  async execute(
-    babyId: string,
-    userId: string,
-    dto: CreateDiaperDto,
-  ): Promise<DiaperResponse> {
-    // Validate configuration: if status is PEE, poop fields shouldn't be set
-    if (dto.status === DiaperStatus.PEE) {
-      if (dto.poopColor || dto.poopConsistency || dto.poopAmount) {
-        throw new InvalidDiaperConfigurationException(
-          'Poop properties cannot be set for a PEE diaper event.',
-        );
-      }
-    }
+  async execute(babyId: string, ownerId: string, dto: CreateDiaperDto): Promise<DiaperResponse> {
+    await this.assertBabyAccess(babyId, ownerId);
+    this.assertValidConfiguration(dto.status, dto);
 
-    const eventData = {
+    const diaper = await this.diaperRepo.create({
       babyId,
-      type: EventType.DIAPER,
+      createdBy: ownerId,
       occurredAt: new Date(dto.occurredAt),
-      note: dto.note || '',
-      createdBy: userId,
-    };
+      note: dto.note,
+      status: dto.status,
+      poopColor: dto.poopColor,
+      poopConsistency: dto.poopConsistency,
+      poopAmount: dto.poopAmount,
+      hasBlood: dto.hasBlood,
+      hasMucus: dto.hasMucus,
+    });
 
-    const diaperEvent = await this.diaperEventRepository.create(dto, eventData);
-    const baseEvent = diaperEvent.event!;
+    return this.toResponse(diaper);
+  }
 
+  private async assertBabyAccess(babyId: string, ownerId: string): Promise<void> {
+    const baby = await this.babyRepo.findById(babyId);
+    if (!baby) throw new BabyNotFoundException(babyId);
+    if (baby.ownerId !== ownerId) throw new ForbiddenBabyAccessException();
+  }
+
+  private assertValidConfiguration(status: DiaperStatus, dto: CreateDiaperDto): void {
+    if (
+      status === DiaperStatus.PEE &&
+      (dto.poopColor || dto.poopConsistency || dto.poopAmount || dto.hasBlood || dto.hasMucus)
+    ) {
+      throw new InvalidDiaperConfigurationException(
+        'Poop details, blood, and mucus cannot be set for a PEE diaper event.',
+      );
+    }
+  }
+
+  private toResponse(diaper: DiaperEvent): DiaperResponse {
+    const event = diaper.event!;
     return {
-      id: baseEvent.id,
-      eventId: baseEvent.id,
-      babyId: baseEvent.babyId,
-      type: baseEvent.type,
-      occurredAt: baseEvent.occurredAt.toISOString(),
-      note: baseEvent.note,
-      createdBy: baseEvent.createdBy,
-      createdAt: baseEvent.createdAt.toISOString(),
-      updatedAt: baseEvent.updatedAt.toISOString(),
-      status: diaperEvent.status,
-      poopColor: diaperEvent.poopColor,
-      poopConsistency: diaperEvent.poopConsistency,
-      poopAmount: diaperEvent.poopAmount,
-      hasBlood: diaperEvent.hasBlood,
-      hasMucus: diaperEvent.hasMucus,
+      id: event.id,
+      eventId: diaper.eventId,
+      babyId: event.babyId,
+      type: event.type,
+      occurredAt: event.occurredAt.toISOString(),
+      note: event.note,
+      createdBy: event.createdBy,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      status: diaper.status,
+      poopColor: diaper.poopColor,
+      poopConsistency: diaper.poopConsistency,
+      poopAmount: diaper.poopAmount,
+      hasBlood: diaper.hasBlood,
+      hasMucus: diaper.hasMucus,
     };
   }
 }

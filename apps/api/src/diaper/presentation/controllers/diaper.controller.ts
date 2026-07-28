@@ -2,24 +2,18 @@ import {
   Controller,
   Post,
   Get,
-  Put,
   Delete,
   Body,
   Param,
   Query,
   UseGuards,
-  Request,
   HttpCode,
   HttpStatus,
   Patch,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/infrastructure/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import { CreateDiaperUseCase } from '../../application/use-cases/create-diaper.use-case';
 import { GetDiaperUseCase } from '../../application/use-cases/get-diaper.use-case';
 import { ListDiapersUseCase } from '../../application/use-cases/list-diapers.use-case';
@@ -29,7 +23,7 @@ import { CreateDiaperDto } from '../../application/dtos/create-diaper.dto';
 import { UpdateDiaperDto } from '../../application/dtos/update-diaper.dto';
 import { ListDiapersQueryDto } from '../../application/dtos/list-diapers-query.dto';
 
-@ApiTags('diapers')
+@ApiTags('Diapers')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('babies/:babyId/diapers')
@@ -43,50 +37,66 @@ export class DiaperController {
   ) {}
 
   @Post()
+  @ApiParam({ name: 'babyId', description: 'Baby profile ID' })
   @ApiOperation({ summary: 'Create a diaper event for a baby' })
   @ApiResponse({ status: 201, description: 'Diaper event created successfully' })
   async create(
     @Param('babyId') babyId: string,
     @Body() dto: CreateDiaperDto,
-    @Request() req: any,
+    @CurrentUser('userId') ownerId: string,
   ) {
-    return this.createDiaperUseCase.execute(babyId, req.user.id, dto);
+    return this.createDiaperUseCase.execute(babyId, ownerId, dto);
   }
 
   @Get()
+  @ApiParam({ name: 'babyId', description: 'Baby profile ID' })
   @ApiOperation({ summary: 'List diaper events for a baby' })
   @ApiResponse({ status: 200, description: 'List of diaper events' })
   async list(
     @Param('babyId') babyId: string,
+    @CurrentUser('userId') ownerId: string,
     @Query() query: ListDiapersQueryDto,
   ) {
-    return this.listDiapersUseCase.execute(babyId, query);
+    return this.listDiapersUseCase.execute(babyId, ownerId, query);
   }
 
   @Get(':id')
+  @ApiParam({ name: 'babyId', description: 'Baby profile ID' })
+  @ApiParam({ name: 'id', description: 'Base event ID' })
   @ApiOperation({ summary: 'Get a specific diaper event' })
   @ApiResponse({ status: 200, description: 'Diaper event details' })
   @ApiResponse({ status: 404, description: 'Event not found' })
-  async get(@Param('babyId') babyId: string, @Param('id') id: string) {
-    return this.getDiaperUseCase.execute(id, babyId);
+  async get(
+    @Param('babyId') babyId: string,
+    @Param('id') id: string,
+    @CurrentUser('userId') ownerId: string,
+  ) {
+    return this.getDiaperUseCase.execute(babyId, id, ownerId);
   }
 
   @Patch(':id')
+  @ApiParam({ name: 'babyId', description: 'Baby profile ID' })
+  @ApiParam({ name: 'id', description: 'Base event ID' })
   @ApiOperation({ summary: 'Update a specific diaper event' })
   @ApiResponse({ status: 200, description: 'Diaper event updated' })
   async update(
     @Param('babyId') babyId: string,
     @Param('id') id: string,
+    @CurrentUser('userId') ownerId: string,
     @Body() dto: UpdateDiaperDto,
   ) {
-    return this.updateDiaperUseCase.execute(id, babyId, dto);
+    return this.updateDiaperUseCase.execute(babyId, id, ownerId, dto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a specific diaper event' })
   @ApiResponse({ status: 204, description: 'Diaper event deleted' })
-  async delete(@Param('babyId') babyId: string, @Param('id') id: string) {
-    await this.deleteDiaperUseCase.execute(id, babyId);
+  async delete(
+    @Param('babyId') babyId: string,
+    @Param('id') id: string,
+    @CurrentUser('userId') ownerId: string,
+  ) {
+    await this.deleteDiaperUseCase.execute(babyId, id, ownerId);
   }
 }
