@@ -1,14 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '../../../../components/Header';
 import FeedFormModal from '../../../../components/FeedFormModal';
 import DiaperFormModal from '../../../../components/DiaperFormModal';
-import { apiFetch } from '../../../../lib/api';
-import { EventResponse, EventType, BabyResponse } from '@baby-tracker/shared-types';
+import { apiFetch, getErrorMessage } from '../../../../lib/api';
+import {
+  EventTimelineResponse,
+  EventType,
+  BabyResponse,
+  TimelineEventResponse,
+} from '@baby-tracker/shared-types';
 import {
   Baby,
   ArrowLeft,
@@ -23,6 +27,7 @@ import {
   TrendingUp,
   Syringe,
   Filter,
+  Search,
 } from 'lucide-react';
 
 export default function BabyEventsPage() {
@@ -30,10 +35,14 @@ export default function BabyEventsPage() {
   const babyId = params?.id as string;
 
   const [baby, setBaby] = useState<BabyResponse | null>(null);
-  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [events, setEvents] = useState<TimelineEventResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Feed Modal state
   const [showFeedModal, setShowFeedModal] = useState(false);
@@ -46,28 +55,52 @@ export default function BabyEventsPage() {
   const [newNote, setNewNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const fetchBabyAndEvents = useCallback(async () => {
-    if (!babyId) return;
-    try {
-      setLoading(true);
-      const [babyData, eventsData] = await Promise.all([
-        apiFetch<BabyResponse>(`/babies/${babyId}`),
-        apiFetch<EventResponse[]>(
-          `/babies/${babyId}/events${filterType !== 'ALL' ? `?type=${filterType}` : ''}`,
-        ),
-      ]);
-      setBaby(babyData);
-      setEvents(eventsData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load events timeline');
-    } finally {
-      setLoading(false);
-    }
-  }, [babyId, filterType]);
+  const fetchBabyAndEvents = useCallback(
+    async (cursor?: string, append = false) => {
+      if (!babyId) return;
+      try {
+        if (append) setLoadingMore(true);
+        else setLoading(true);
+        const query = new URLSearchParams({ limit: '20' });
+        if (filterType !== 'ALL') query.set('type', filterType);
+        if (search.trim()) query.set('search', search.trim());
+        if (cursor) query.set('cursor', cursor);
+        const [babyData, eventsData] = await Promise.all([
+          apiFetch<BabyResponse>(`/babies/${babyId}`),
+          apiFetch<EventTimelineResponse>(`/babies/${babyId}/events?${query.toString()}`),
+        ]);
+        setBaby(babyData);
+        setEvents((current) => (append ? [...current, ...eventsData.items] : eventsData.items));
+        setNextCursor(eventsData.nextCursor);
+      } catch (error: unknown) {
+        setError(getErrorMessage(error, 'Failed to load events timeline'));
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [babyId, filterType, search],
+  );
 
   useEffect(() => {
-    fetchBabyAndEvents();
+    void fetchBabyAndEvents();
   }, [fetchBabyAndEvents]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !nextCursor || loadingMore || loading) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          void fetchBabyAndEvents(nextCursor, true);
+        }
+      },
+      { rootMargin: '160px' },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [fetchBabyAndEvents, loading, loadingMore, nextCursor]);
 
   // Default occurredAt timestamp for datetime-local input
   const getNowLocal = () => {
@@ -91,7 +124,6 @@ export default function BabyEventsPage() {
     setShowLogModal(true);
   };
 
-
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -105,9 +137,9 @@ export default function BabyEventsPage() {
         }),
       });
       setShowLogModal(false);
-      fetchBabyAndEvents();
-    } catch (err: any) {
-      alert(err.message || 'Failed to create event');
+      void fetchBabyAndEvents();
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Failed to create event'));
     } finally {
       setSubmitting(false);
     }
@@ -120,8 +152,8 @@ export default function BabyEventsPage() {
         method: 'DELETE',
       });
       setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete event');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Failed to delete event'));
     }
   };
 
@@ -162,6 +194,8 @@ export default function BabyEventsPage() {
         return 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300';
     }
   };
+
+  const formatLabel = (value: string) => value.replaceAll('_', ' ').toLowerCase();
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans pb-16">
@@ -224,11 +258,20 @@ export default function BabyEventsPage() {
 
         {/* Quick Log Bar & Filters */}
         <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-3xl p-6 shadow-sm mb-8 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
               Quick Log Activity
             </h3>
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2">
+              <label className="flex items-center rounded-xl border border-[var(--border)] px-2.5 py-1 text-xs">
+                <Search className="mr-1.5 h-3.5 w-3.5 text-neutral-400" />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search notes"
+                  className="w-28 bg-transparent outline-none sm:w-36"
+                />
+              </label>
               <Filter className="h-3.5 w-3.5 text-neutral-400" />
               <select
                 value={filterType}
@@ -248,7 +291,12 @@ export default function BabyEventsPage() {
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
             {[
               { type: EventType.FEED, label: 'Feed', icon: Droplets, color: 'text-orange-500' },
-              { type: EventType.DIAPER, label: 'Diaper', icon: Activity, color: 'text-emerald-500' },
+              {
+                type: EventType.DIAPER,
+                label: 'Diaper',
+                icon: Activity,
+                color: 'text-emerald-500',
+              },
               { type: EventType.SLEEP, label: 'Sleep', icon: Moon, color: 'text-indigo-500' },
               { type: EventType.MEDICINE, label: 'Medicine', icon: Pill, color: 'text-purple-500' },
               { type: EventType.GROWTH, label: 'Growth', icon: TrendingUp, color: 'text-blue-500' },
@@ -259,7 +307,9 @@ export default function BabyEventsPage() {
                 onClick={() => handleOpenModal(item.type)}
                 className="flex flex-col items-center justify-center p-3 rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/40 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition group"
               >
-                <item.icon className={`h-5 w-5 ${item.color} mb-1 group-hover:scale-110 transition-transform`} />
+                <item.icon
+                  className={`h-5 w-5 ${item.color} mb-1 group-hover:scale-110 transition-transform`}
+                />
                 <span className="text-[11px] font-semibold text-neutral-700 dark:text-neutral-300">
                   {item.label}
                 </span>
@@ -293,54 +343,177 @@ export default function BabyEventsPage() {
             </h3>
 
             <div className="relative border-l border-[var(--border)] ml-3 pl-6 space-y-6">
-              {events.map((event) => (
-                <div key={event.id} className="relative group">
-                  {/* Timeline Node Dot */}
-                  <div className="absolute -left-[33px] top-1 p-1.5 rounded-full border border-[var(--background)] bg-[var(--card-bg)] shadow-sm">
-                    {getEventIcon(event.type)}
-                  </div>
-
-                  {/* Event Item Box */}
-                  <div className="bg-neutral-50/50 dark:bg-neutral-900/20 border border-[var(--border)] rounded-2xl p-4 hover:border-[var(--primary)]/40 transition">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getEventBadgeColor(
-                            event.type,
-                          )}`}
-                        >
-                          {event.type}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center space-x-3">
-                        <div className="flex items-center text-xs text-neutral-400">
-                          <Clock className="h-3.5 w-3.5 mr-1" />
-                          {new Date(event.occurredAt).toLocaleString([], {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </div>
-
-                        <button
-                          onClick={() => handleDeleteEvent(event.id)}
-                          className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                          title="Delete Event Log"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {event.note && (
-                      <p className="text-xs text-neutral-700 dark:text-neutral-300 mt-2.5 pt-2 border-t border-[var(--border)]">
-                        {event.note}
+              {events.map((event, index) => {
+                const previous = events[index - 1];
+                const dateLabel = new Date(event.occurredAt).toLocaleDateString([], {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+                const isNewDate =
+                  !previous ||
+                  new Date(previous.occurredAt).toDateString() !==
+                    new Date(event.occurredAt).toDateString();
+                return (
+                  <div key={event.id} className="relative group">
+                    {isNewDate && (
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                        {dateLabel}
                       </p>
                     )}
+                    {/* Timeline Node Dot */}
+                    <div className="absolute -left-[33px] top-1 p-1.5 rounded-full border border-[var(--background)] bg-[var(--card-bg)] shadow-sm">
+                      {getEventIcon(event.type)}
+                    </div>
+
+                    {/* Event Item Box */}
+                    <div className="bg-neutral-50/50 dark:bg-neutral-900/20 border border-[var(--border)] rounded-2xl p-4 hover:border-[var(--primary)]/40 transition">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getEventBadgeColor(
+                              event.type,
+                            )}`}
+                          >
+                            {event.type}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center text-xs text-neutral-400">
+                            <Clock className="h-3.5 w-3.5 mr-1" />
+                            {new Date(event.occurredAt).toLocaleString([], {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteEvent(event.id)}
+                            className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                            title="Delete Event Log"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {event.feed && (
+                        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                          <div>
+                            <dt className="inline text-neutral-400">Feed category: </dt>
+                            <dd className="inline font-medium">
+                              {formatLabel(event.feed.feedType)}
+                            </dd>
+                          </div>
+                          {event.feed.preparedVolume !== null && (
+                            <div>
+                              <dt className="inline text-neutral-400">Prepared: </dt>
+                              <dd className="inline font-medium">{event.feed.preparedVolume} ml</dd>
+                            </div>
+                          )}
+                          {event.feed.consumedVolume !== null && (
+                            <div>
+                              <dt className="inline text-neutral-400">Consumed: </dt>
+                              <dd className="inline font-medium">{event.feed.consumedVolume} ml</dd>
+                            </div>
+                          )}
+                          {(event.feed.leftDuration !== null ||
+                            event.feed.rightDuration !== null) && (
+                            <div>
+                              <dt className="inline text-neutral-400">Duration: </dt>
+                              <dd className="inline font-medium">
+                                {event.feed.leftDuration ?? 0}m left ·{' '}
+                                {event.feed.rightDuration ?? 0}m right
+                              </dd>
+                            </div>
+                          )}
+                          {event.feed.brand && (
+                            <div>
+                              <dt className="inline text-neutral-400">Brand: </dt>
+                              <dd className="inline font-medium">{event.feed.brand}</dd>
+                            </div>
+                          )}
+                          {event.feed.stage && (
+                            <div>
+                              <dt className="inline text-neutral-400">Stage: </dt>
+                              <dd className="inline font-medium">{event.feed.stage}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+
+                      {event.diaper && (
+                        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                          <div>
+                            <dt className="inline text-neutral-400">Diaper status: </dt>
+                            <dd className="inline font-medium">
+                              {formatLabel(event.diaper.status)}
+                            </dd>
+                          </div>
+                          {event.diaper.poopColor && (
+                            <div>
+                              <dt className="inline text-neutral-400">Poop color: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopColor)}
+                              </dd>
+                            </div>
+                          )}
+                          {event.diaper.poopConsistency && (
+                            <div>
+                              <dt className="inline text-neutral-400">Consistency: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopConsistency)}
+                              </dd>
+                            </div>
+                          )}
+                          {event.diaper.poopAmount && (
+                            <div>
+                              <dt className="inline text-neutral-400">Amount: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopAmount)}
+                              </dd>
+                            </div>
+                          )}
+                          {(event.diaper.hasBlood || event.diaper.hasMucus) && (
+                            <div>
+                              <dt className="inline text-neutral-400">Flags: </dt>
+                              <dd className="inline font-medium">
+                                {[
+                                  event.diaper.hasBlood ? 'Blood' : null,
+                                  event.diaper.hasMucus ? 'Mucus' : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+
+                      {event.note && (
+                        <p className="text-xs text-neutral-700 dark:text-neutral-300 mt-2.5 pt-2 border-t border-[var(--border)]">
+                          {event.note}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {nextCursor && (
+              <div ref={loadMoreRef} className="mt-6 text-center">
+                <button
+                  type="button"
+                  disabled={loadingMore}
+                  onClick={() => void fetchBabyAndEvents(nextCursor, true)}
+                  className="w-full rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50 disabled:opacity-50 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                >
+                  {loadingMore ? 'Loading…' : 'Load more events'}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -418,7 +591,11 @@ export default function BabyEventsPage() {
                   disabled={submitting}
                   className="flex-1 flex items-center justify-center space-x-2 py-2.5 px-4 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] disabled:opacity-50 transition-colors shadow-md"
                 >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>Save Log</span>}
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <span>Save Log</span>
+                  )}
                 </button>
               </div>
             </form>

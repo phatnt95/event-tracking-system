@@ -11,13 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiParam,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../auth/infrastructure/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import { CreateEventDto } from '../../application/dtos/create-event.dto';
@@ -28,7 +22,7 @@ import { GetEventUseCase } from '../../application/use-cases/get-event.use-case'
 import { ListEventsUseCase } from '../../application/use-cases/list-events.use-case';
 import { UpdateEventUseCase } from '../../application/use-cases/update-event.use-case';
 import { DeleteEventUseCase } from '../../application/use-cases/delete-event.use-case';
-import { EventResponse } from '@baby-tracker/shared-types';
+import { EventResponse, EventTimelineResponse } from '@baby-tracker/shared-types';
 
 @ApiTags('Events')
 @ApiBearerAuth()
@@ -59,15 +53,17 @@ export class EventsController {
 
   @Get()
   @ApiParam({ name: 'babyId', description: 'Baby profile ID' })
-  @ApiOperation({ summary: 'List events for a baby (filterable by type, date range)' })
-  @ApiResponse({ status: 200, description: 'List of events.' })
+  @ApiOperation({
+    summary: 'List a baby timeline with cursor pagination, filters, and note search',
+  })
+  @ApiResponse({ status: 200, description: 'A cursor-paginated timeline page.' })
   @ApiResponse({ status: 403, description: 'Access forbidden.' })
   @ApiResponse({ status: 404, description: 'Baby not found.' })
   async list(
     @CurrentUser('userId') ownerId: string,
     @Param('babyId') babyId: string,
     @Query() query: ListEventsQueryDto,
-  ): Promise<EventResponse[]> {
+  ): Promise<EventTimelineResponse> {
     return this.listEventsUseCase.execute(babyId, ownerId, query);
   }
 

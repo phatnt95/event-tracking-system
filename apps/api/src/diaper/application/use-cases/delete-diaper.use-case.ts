@@ -1,21 +1,25 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
+import {
+  BabyNotFoundException,
+  ForbiddenBabyAccessException,
+} from '../../../babies/domain/errors/baby.errors';
 import { DiaperNotFoundException } from '../../domain/errors/diaper.errors';
+import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
 
 @Injectable()
 export class DeleteDiaperUseCase {
   constructor(
-    @Inject('IDiaperEventRepository')
-    private readonly diaperEventRepository: IDiaperEventRepository,
+    @Inject(IDiaperEventRepository) private readonly diaperRepo: IDiaperEventRepository,
+    @Inject(IBabyRepository) private readonly babyRepo: IBabyRepository,
   ) {}
 
-  async execute(id: string, babyId: string): Promise<void> {
-    const diaperEvent = await this.diaperEventRepository.findByEventId(id);
-
-    if (!diaperEvent || !diaperEvent.event || diaperEvent.event.babyId !== babyId) {
-      throw new DiaperNotFoundException();
-    }
-
-    await this.diaperEventRepository.delete(diaperEvent.id);
+  async execute(babyId: string, eventId: string, ownerId: string): Promise<void> {
+    const baby = await this.babyRepo.findById(babyId);
+    if (!baby) throw new BabyNotFoundException(babyId);
+    if (baby.ownerId !== ownerId) throw new ForbiddenBabyAccessException();
+    const diaper = await this.diaperRepo.findByEventId(eventId);
+    if (!diaper || diaper.event?.babyId !== babyId) throw new DiaperNotFoundException(eventId);
+    await this.diaperRepo.delete(eventId);
   }
 }

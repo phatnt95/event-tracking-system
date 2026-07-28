@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaModule } from '../prisma/prisma.module';
 import { DiaperController } from './presentation/controllers/diaper.controller';
 import { PrismaDiaperEventRepository } from './infrastructure/repositories/prisma-diaper-event.repository';
 import { CreateDiaperUseCase } from './application/use-cases/create-diaper.use-case';
@@ -8,13 +7,15 @@ import { ListDiapersUseCase } from './application/use-cases/list-diapers.use-cas
 import { UpdateDiaperUseCase } from './application/use-cases/update-diaper.use-case';
 import { DeleteDiaperUseCase } from './application/use-cases/delete-diaper.use-case';
 import { AuthModule } from 'src/auth/auth.module';
+import { BabiesModule } from '../babies/babies.module';
+import { IDiaperEventRepository } from './domain/repositories/diaper-event.repository.interface';
 
 @Module({
-  imports: [AuthModule, PrismaModule],
+  imports: [AuthModule, BabiesModule],
   controllers: [DiaperController],
   providers: [
     {
-      provide: 'IDiaperEventRepository',
+      provide: IDiaperEventRepository,
       useClass: PrismaDiaperEventRepository,
     },
     CreateDiaperUseCase,

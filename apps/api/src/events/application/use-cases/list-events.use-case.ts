@@ -1,8 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IEventRepository } from '../../domain/repositories/event.repository.interface';
 import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
-import { EventResponse } from '@baby-tracker/shared-types';
-import { BabyNotFoundException, ForbiddenBabyAccessException } from '../../../babies/domain/errors/baby.errors';
+import {
+  EventResponse,
+  EventTimelineResponse,
+  TimelineEventResponse,
+} from '@baby-tracker/shared-types';
+import {
+  BabyNotFoundException,
+  ForbiddenBabyAccessException,
+} from '../../../babies/domain/errors/baby.errors';
 import { ListEventsQueryDto } from '../dtos/list-events-query.dto';
 import { Event } from '../../domain/entities/event.entity';
 
@@ -15,7 +22,11 @@ export class ListEventsUseCase {
     private readonly babyRepo: IBabyRepository,
   ) {}
 
-  async execute(babyId: string, ownerId: string, query: ListEventsQueryDto): Promise<EventResponse[]> {
+  async execute(
+    babyId: string,
+    ownerId: string,
+    query: ListEventsQueryDto,
+  ): Promise<EventTimelineResponse> {
     const baby = await this.babyRepo.findById(babyId);
     if (!baby) {
       throw new BabyNotFoundException(babyId);
@@ -24,17 +35,22 @@ export class ListEventsUseCase {
       throw new ForbiddenBabyAccessException();
     }
 
-    const events = await this.eventRepo.findByBaby(babyId, {
+    const page = await this.eventRepo.findByBaby(babyId, {
       type: query.type,
       from: query.from ? new Date(query.from) : undefined,
       to: query.to ? new Date(query.to) : undefined,
-      limit: query.limit ?? 50,
+      limit: query.limit ?? 20,
+      cursor: query.cursor,
+      search: query.search?.trim() || undefined,
     });
 
-    return events.map((e) => this.toResponse(e));
+    return {
+      items: page.items.map((event) => this.toResponse(event)),
+      nextCursor: page.nextCursor,
+    };
   }
 
-  private toResponse(event: Event): EventResponse {
+  private toResponse(event: Event): TimelineEventResponse {
     return {
       id: event.id,
       babyId: event.babyId,
@@ -44,6 +60,8 @@ export class ListEventsUseCase {
       createdBy: event.createdBy,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
+      feed: event.feed,
+      diaper: event.diaper,
     };
   }
 }

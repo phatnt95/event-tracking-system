@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { TokenResponse } from '@baby-tracker/shared-types';
 
 const API_BASE_URL = 'http://localhost:3000/api';
@@ -11,6 +10,10 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+}
+
+export function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
 export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -28,7 +31,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
-    let errorData: any;
+    let errorData: unknown;
     try {
       errorData = await response.json();
     } catch {
@@ -72,11 +75,18 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
       }
     }
 
-    const err = errorData?.error || {};
+    const errorPayload =
+      typeof errorData === 'object' && errorData !== null && 'error' in errorData
+        ? errorData.error
+        : undefined;
+    const err: Record<string, unknown> =
+      typeof errorPayload === 'object' && errorPayload !== null
+        ? (errorPayload as Record<string, unknown>)
+        : {};
     throw new ApiError(
-      err.statusCode || response.status,
-      err.message || 'An error occurred',
-      err.code,
+      typeof err.statusCode === 'number' ? err.statusCode : response.status,
+      typeof err.message === 'string' ? err.message : 'An error occurred',
+      typeof err.code === 'string' ? err.code : undefined,
     );
   }
 

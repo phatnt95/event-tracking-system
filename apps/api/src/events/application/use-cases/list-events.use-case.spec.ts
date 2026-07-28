@@ -88,7 +88,7 @@ describe('ListEventsUseCase', () => {
 
   it('should list events with filters and default limit', async () => {
     babyRepo.findById.mockResolvedValue(mockBaby);
-    eventRepo.findByBaby.mockResolvedValue(mockEvents);
+    eventRepo.findByBaby.mockResolvedValue({ items: mockEvents, nextCursor: 'event-2' });
 
     const query = {
       type: EventType.FEED,
@@ -103,15 +103,18 @@ describe('ListEventsUseCase', () => {
       type: EventType.FEED,
       from: new Date('2026-07-27T00:00:00.000Z'),
       to: new Date('2026-07-27T23:59:59.000Z'),
-      limit: 50,
+      limit: 20,
+      cursor: undefined,
+      search: undefined,
     });
-    expect(result.length).toBe(2);
-    expect(result[0].id).toBe('event-1');
+    expect(result.items).toHaveLength(2);
+    expect(result.items[0].id).toBe('event-1');
+    expect(result.nextCursor).toBe('event-2');
   });
 
   it('should respect custom limit in query', async () => {
     babyRepo.findById.mockResolvedValue(mockBaby);
-    eventRepo.findByBaby.mockResolvedValue([mockEvents[0]]);
+    eventRepo.findByBaby.mockResolvedValue({ items: [mockEvents[0]], nextCursor: null });
 
     const query = { limit: 10 };
     await useCase.execute(mockBabyId, mockOwnerId, query);
@@ -121,6 +124,8 @@ describe('ListEventsUseCase', () => {
       from: undefined,
       to: undefined,
       limit: 10,
+      cursor: undefined,
+      search: undefined,
     });
   });
 

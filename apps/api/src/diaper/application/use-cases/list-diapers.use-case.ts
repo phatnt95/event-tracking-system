@@ -1,57 +1,56 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
-import { DiaperResponse, DiaperStatus } from '@baby-tracker/shared-types';
+import { Inject, Injectable } from '@nestjs/common';
+import { DiaperResponse } from '@baby-tracker/shared-types';
+import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
+import {
+  BabyNotFoundException,
+  ForbiddenBabyAccessException,
+} from '../../../babies/domain/errors/baby.errors';
 import { ListDiapersQueryDto } from '../dtos/list-diapers-query.dto';
+import { DiaperEvent } from '../../domain/entities/diaper-event.entity';
+import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
 
 @Injectable()
 export class ListDiapersUseCase {
   constructor(
-    @Inject('IDiaperEventRepository')
-    private readonly diaperEventRepository: IDiaperEventRepository,
+    @Inject(IDiaperEventRepository) private readonly diaperRepo: IDiaperEventRepository,
+    @Inject(IBabyRepository) private readonly babyRepo: IBabyRepository,
   ) {}
 
   async execute(
     babyId: string,
-    query?: ListDiapersQueryDto,
+    ownerId: string,
+    query: ListDiapersQueryDto,
   ): Promise<DiaperResponse[]> {
-    let diapers = await this.diaperEventRepository.findAllByBabyId(babyId);
-
-    // Apply filters in memory
-    if (query) {
-      if (query.status) {
-        diapers = diapers.filter(
-          (d) => d.status === (query.status as DiaperStatus),
-        );
-      }
-      if (query.startDate) {
-        const start = new Date(query.startDate).getTime();
-        diapers = diapers.filter((d) => d.event!.occurredAt.getTime() >= start);
-      }
-      if (query.endDate) {
-        const end = new Date(query.endDate).getTime();
-        diapers = diapers.filter((d) => d.event!.occurredAt.getTime() <= end);
-      }
-    }
-
-    return diapers.map((diaperEvent) => {
-      const baseEvent = diaperEvent.event!;
-      return {
-        id: baseEvent.id,
-        eventId: baseEvent.id,
-        babyId: baseEvent.babyId,
-        type: baseEvent.type,
-        occurredAt: baseEvent.occurredAt.toISOString(),
-        note: baseEvent.note,
-        createdBy: baseEvent.createdBy,
-        createdAt: baseEvent.createdAt.toISOString(),
-        updatedAt: baseEvent.updatedAt.toISOString(),
-        status: diaperEvent.status,
-        poopColor: diaperEvent.poopColor,
-        poopConsistency: diaperEvent.poopConsistency,
-        poopAmount: diaperEvent.poopAmount,
-        hasBlood: diaperEvent.hasBlood,
-        hasMucus: diaperEvent.hasMucus,
-      };
+    const baby = await this.babyRepo.findById(babyId);
+    if (!baby) throw new BabyNotFoundException(babyId);
+    if (baby.ownerId !== ownerId) throw new ForbiddenBabyAccessException();
+    const diapers = await this.diaperRepo.findByBaby(babyId, {
+      status: query.status,
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+      limit: query.limit ?? 50,
     });
+    return diapers.map((diaper) => this.toResponse(diaper));
+  }
+
+  private toResponse(diaper: DiaperEvent): DiaperResponse {
+    const event = diaper.event!;
+    return {
+      id: event.id,
+      eventId: diaper.eventId,
+      babyId: event.babyId,
+      type: event.type,
+      occurredAt: event.occurredAt.toISOString(),
+      note: event.note,
+      createdBy: event.createdBy,
+      createdAt: event.createdAt.toISOString(),
+      updatedAt: event.updatedAt.toISOString(),
+      status: diaper.status,
+      poopColor: diaper.poopColor,
+      poopConsistency: diaper.poopConsistency,
+      poopAmount: diaper.poopAmount,
+      hasBlood: diaper.hasBlood,
+      hasMucus: diaper.hasMucus,
+    };
   }
 }

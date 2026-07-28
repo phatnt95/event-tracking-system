@@ -1,43 +1,48 @@
 import { Injectable } from '@nestjs/common';
+import {
+  DiaperStatus,
+  EventType,
+  PoopAmount,
+  PoopColor,
+  PoopConsistency,
+} from '@baby-tracker/shared-types';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { IDiaperEventRepository } from '../../domain/repositories/diaper-event.repository.interface';
+import {
+  CreateDiaperParams,
+  IDiaperEventRepository,
+  ListDiapersFilter,
+  UpdateDiaperParams,
+} from '../../domain/repositories/diaper-event.repository.interface';
 import { DiaperEvent } from '../../domain/entities/diaper-event.entity';
+import { Event as EventEntity } from '../../../events/domain/entities/event.entity';
 
 @Injectable()
 export class PrismaDiaperEventRepository implements IDiaperEventRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(diaperData: any, eventData: any): Promise<DiaperEvent> {
-    const result = await this.prisma.event.create({
+  async create(params: CreateDiaperParams): Promise<DiaperEvent> {
+    const result = await this.prisma.diaperEvent.create({
       data: {
-        ...eventData,
-        diaperEvent: {
+        status: params.status,
+        poopColor: params.poopColor,
+        poopConsistency: params.poopConsistency,
+        poopAmount: params.poopAmount,
+        hasBlood: params.hasBlood ?? false,
+        hasMucus: params.hasMucus ?? false,
+        event: {
           create: {
-            status: diaperData.status,
-            poopColor: diaperData.poopColor,
-            poopConsistency: diaperData.poopConsistency,
-            poopAmount: diaperData.poopAmount,
-            hasBlood: diaperData.hasBlood || false,
-            hasMucus: diaperData.hasMucus || false,
+            babyId: params.babyId,
+            type: EventType.DIAPER,
+            occurredAt: params.occurredAt,
+            note: params.note ?? '',
+            createdBy: params.createdBy,
           },
         },
       },
-      include: {
-        diaperEvent: true,
-      },
-    });
-
-    return this.mapToEntity(result.diaperEvent!, result);
-  }
-
-  async findById(id: string): Promise<DiaperEvent | null> {
-    const result = await this.prisma.diaperEvent.findUnique({
-      where: { id },
       include: { event: true },
     });
 
-    if (!result) return null;
-    return this.mapToEntity(result, result.event);
+    return this.mapToEntity(result);
   }
 
   async findByEventId(eventId: string): Promise<DiaperEvent | null> {
@@ -46,73 +51,104 @@ export class PrismaDiaperEventRepository implements IDiaperEventRepository {
       include: { event: true },
     });
 
-    if (!result) return null;
-    return this.mapToEntity(result, result.event);
+    return result ? this.mapToEntity(result) : null;
   }
 
-  async findAllByBabyId(babyId: string): Promise<DiaperEvent[]> {
+  async findByBaby(babyId: string, filter?: ListDiapersFilter): Promise<DiaperEvent[]> {
     const results = await this.prisma.diaperEvent.findMany({
       where: {
-        event: { babyId },
+        event: {
+          babyId,
+          type: EventType.DIAPER,
+          ...(filter?.from || filter?.to
+            ? {
+                occurredAt: {
+                  ...(filter.from ? { gte: filter.from } : {}),
+                  ...(filter.to ? { lte: filter.to } : {}),
+                },
+              }
+            : {}),
+        },
+        ...(filter?.status ? { status: filter.status } : {}),
       },
       include: { event: true },
-      orderBy: {
-        event: { occurredAt: 'desc' },
-      },
+      orderBy: { event: { occurredAt: 'desc' } },
+      take: filter?.limit ?? 50,
     });
 
-    return results.map((r: any) => this.mapToEntity(r, r.event));
+    return results.map((result) => this.mapToEntity(result));
   }
 
-  async update(id: string, diaperData: any, eventData?: any): Promise<DiaperEvent> {
+  async update(eventId: string, params: UpdateDiaperParams): Promise<DiaperEvent> {
     const result = await this.prisma.diaperEvent.update({
-      where: { id },
+      where: { eventId },
       data: {
-        status: diaperData.status,
-        poopColor: diaperData.poopColor,
-        poopConsistency: diaperData.poopConsistency,
-        poopAmount: diaperData.poopAmount,
-        hasBlood: diaperData.hasBlood,
-        hasMucus: diaperData.hasMucus,
-        ...(eventData && {
-          event: {
-            update: eventData,
+        status: params.status,
+        poopColor: params.poopColor,
+        poopConsistency: params.poopConsistency,
+        poopAmount: params.poopAmount,
+        hasBlood: params.hasBlood,
+        hasMucus: params.hasMucus,
+        event: {
+          update: {
+            occurredAt: params.occurredAt,
+            note: params.note,
           },
-        }),
+        },
       },
       include: { event: true },
     });
 
-    return this.mapToEntity(result, result.event);
+    return this.mapToEntity(result);
   }
 
-  async delete(id: string): Promise<void> {
-    // Delete the base event, which cascades to diaperEvent
-    const diaper = await this.prisma.diaperEvent.findUnique({
-      where: { id },
-      select: { eventId: true },
-    });
-    
-    if (diaper) {
-      await this.prisma.event.delete({
-        where: { id: diaper.eventId },
-      });
-    }
+  async delete(eventId: string): Promise<void> {
+    await this.prisma.event.delete({ where: { id: eventId } });
   }
 
-  private mapToEntity(prismaDiaper: any, prismaEvent: any): DiaperEvent {
+  private mapToEntity(result: {
+    id: string;
+    eventId: string;
+    status: string;
+    hasBlood: boolean;
+    hasMucus: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    poopColor: string | null;
+    poopConsistency: string | null;
+    poopAmount: string | null;
+    event: {
+      id: string;
+      babyId: string;
+      type: string;
+      occurredAt: Date;
+      note: string;
+      createdBy: string;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+  }): DiaperEvent {
     return new DiaperEvent(
-      prismaDiaper.id,
-      prismaDiaper.eventId,
-      prismaDiaper.status,
-      prismaDiaper.hasBlood,
-      prismaDiaper.hasMucus,
-      prismaDiaper.createdAt,
-      prismaDiaper.updatedAt,
-      prismaDiaper.poopColor,
-      prismaDiaper.poopConsistency,
-      prismaDiaper.poopAmount,
-      prismaEvent,
+      result.id,
+      result.eventId,
+      result.status as DiaperStatus,
+      result.hasBlood,
+      result.hasMucus,
+      result.createdAt,
+      result.updatedAt,
+      result.poopColor as PoopColor | null,
+      result.poopConsistency as PoopConsistency | null,
+      result.poopAmount as PoopAmount | null,
+      new EventEntity(
+        result.event.id,
+        result.event.babyId,
+        result.event.type as EventType,
+        result.event.occurredAt,
+        result.event.note,
+        result.event.createdBy,
+        result.event.createdAt,
+        result.event.updatedAt,
+      ),
     );
   }
 }

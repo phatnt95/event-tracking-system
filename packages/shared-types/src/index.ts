@@ -98,6 +98,35 @@ export interface EventResponse {
   updatedAt: string;
 }
 
+export interface TimelineFeedDetails {
+  feedType: FeedType;
+  leftDuration: number | null;
+  rightDuration: number | null;
+  preparedVolume: number | null;
+  consumedVolume: number | null;
+  brand: string | null;
+  stage: string | null;
+}
+
+export interface TimelineDiaperDetails {
+  status: DiaperStatus;
+  poopColor: PoopColor | null;
+  poopConsistency: PoopConsistency | null;
+  poopAmount: PoopAmount | null;
+  hasBlood: boolean;
+  hasMucus: boolean;
+}
+
+export interface TimelineEventResponse extends EventResponse {
+  feed?: TimelineFeedDetails;
+  diaper?: TimelineDiaperDetails;
+}
+
+export interface EventTimelineResponse {
+  items: TimelineEventResponse[];
+  nextCursor: string | null;
+}
+
 export interface FeedResponse extends EventResponse {
   eventId: string;
   feedType: FeedType;
@@ -118,7 +147,6 @@ export interface DiaperResponse extends EventResponse {
   hasBlood: boolean;
   hasMucus: boolean;
 }
-
 
 export interface AuthResponse {
   user: UserResponse;
