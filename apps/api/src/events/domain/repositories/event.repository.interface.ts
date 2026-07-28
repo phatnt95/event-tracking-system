@@ -6,6 +6,13 @@ export interface ListEventsFilter {
   from?: Date;
   to?: Date;
   limit?: number;
+  cursor?: string;
+  search?: string;
+}
+
+export interface EventTimelinePage {
+  items: Event[];
+  nextCursor: string | null;
 }
 
 export interface IEventRepository {
@@ -27,7 +34,7 @@ export interface IEventRepository {
 
   findById(id: string): Promise<Event | null>;
 
-  findByBaby(babyId: string, filter: ListEventsFilter): Promise<Event[]>;
+  findByBaby(babyId: string, filter: ListEventsFilter): Promise<EventTimelinePage>;
 
   delete(id: string): Promise<void>;
 }

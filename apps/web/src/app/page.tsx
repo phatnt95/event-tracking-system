@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Activity, Baby, ChevronRight, Clock, Droplets, Moon, Plus, Weight } from 'lucide-react';
-import { BabyResponse, EventResponse, EventType, Gender } from '@baby-tracker/shared-types';
+import {
+  BabyResponse,
+  EventResponse,
+  EventTimelineResponse,
+  EventType,
+  Gender,
+} from '@baby-tracker/shared-types';
 import Header from '../components/Header';
 import { apiFetch, getErrorMessage } from '../lib/api';
 
@@ -60,8 +66,8 @@ export default function Home() {
   const loadEvents = useCallback(async (babyId: string) => {
     setIsLoadingEvents(true);
     try {
-      const result = await apiFetch<EventResponse[]>(`/babies/${babyId}/events?limit=10`);
-      setEvents(result);
+      const result = await apiFetch<EventTimelineResponse>(`/babies/${babyId}/events?limit=10`);
+      setEvents(result.items);
     } catch (error: unknown) {
       setEvents([]);
       setError(getErrorMessage(error, 'Failed to load the event timeline.'));

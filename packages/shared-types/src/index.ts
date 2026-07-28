@@ -98,6 +98,11 @@ export interface EventResponse {
   updatedAt: string;
 }
 
+export interface EventTimelineResponse {
+  items: EventResponse[];
+  nextCursor: string | null;
+}
+
 export interface FeedResponse extends EventResponse {
   eventId: string;
   feedType: FeedType;
@@ -118,7 +123,6 @@ export interface DiaperResponse extends EventResponse {
   hasBlood: boolean;
   hasMucus: boolean;
 }
-
 
 export interface AuthResponse {
   user: UserResponse;

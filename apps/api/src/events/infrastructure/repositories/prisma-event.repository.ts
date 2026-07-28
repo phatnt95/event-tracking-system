@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
 import {
+  EventTimelinePage,
   IEventRepository,
   ListEventsFilter,
 } from '../../domain/repositories/event.repository.interface';
@@ -12,7 +12,16 @@ import { EventType } from '@baby-tracker/shared-types';
 export class PrismaEventRepository implements IEventRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapToEntity(db: any): EventEntity {
+  private mapToEntity(db: {
+    id: string;
+    babyId: string;
+    type: string;
+    occurredAt: Date;
+    note: string;
+    createdBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }): EventEntity {
     return new EventEntity(
       db.id,
       db.babyId,
@@ -67,11 +76,13 @@ export class PrismaEventRepository implements IEventRepository {
     return this.mapToEntity(db);
   }
 
-  async findByBaby(babyId: string, filter: ListEventsFilter): Promise<EventEntity[]> {
+  async findByBaby(babyId: string, filter: ListEventsFilter): Promise<EventTimelinePage> {
+    const pageSize = filter.limit ?? 20;
     const db = await this.prisma.event.findMany({
       where: {
         babyId,
         ...(filter.type ? { type: filter.type } : {}),
+        ...(filter.search ? { note: { contains: filter.search, mode: 'insensitive' } } : {}),
         ...(filter.from || filter.to
           ? {
               occurredAt: {
@@ -81,10 +92,16 @@ export class PrismaEventRepository implements IEventRepository {
             }
           : {}),
       },
-      orderBy: { occurredAt: 'desc' },
-      take: filter.limit ?? 50,
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      ...(filter.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
+      take: pageSize + 1,
     });
-    return db.map((e) => this.mapToEntity(e));
+    const hasNextPage = db.length > pageSize;
+    const items = db.slice(0, pageSize).map((event) => this.mapToEntity(event));
+    return {
+      items,
+      nextCursor: hasNextPage ? (items.at(-1)?.id ?? null) : null,
+    };
   }
 
   async delete(id: string): Promise<void> {

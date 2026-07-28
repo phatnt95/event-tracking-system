@@ -1,10 +1,19 @@
-import { IsEnum, IsDateString, IsOptional, IsInt, Min, Max } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  IsEnum,
+  IsDateString,
+  IsOptional,
+  IsInt,
+  IsString,
+  IsUUID,
+  Min,
+  Max,
+} from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { EventType } from '@baby-tracker/shared-types';
 
 export class ListEventsQueryDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     enum: EventType,
     description: 'Filter by event type',
     required: false,
@@ -13,7 +22,7 @@ export class ListEventsQueryDto {
   @IsOptional()
   type?: EventType;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2026-07-01T00:00:00.000Z',
     description: 'Start of the date range (ISO 8601)',
     required: false,
@@ -22,7 +31,7 @@ export class ListEventsQueryDto {
   @IsOptional()
   from?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '2026-07-31T23:59:59.000Z',
     description: 'End of the date range (ISO 8601)',
     required: false,
@@ -31,16 +40,26 @@ export class ListEventsQueryDto {
   @IsOptional()
   to?: string;
 
-  @ApiProperty({
-    example: 50,
-    description: 'Maximum number of events to return (1–200, default: 50)',
+  @ApiPropertyOptional({
+    example: 20,
+    description: 'Maximum number of events to return (1–100, default: 20)',
     required: false,
-    default: 50,
+    default: 20,
   })
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(200)
+  @Max(100)
   @IsOptional()
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Event ID cursor returned by the previous timeline page' })
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
+
+  @ApiPropertyOptional({ description: 'Case-insensitive search in event notes' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
