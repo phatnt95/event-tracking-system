@@ -1,7 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { IEventRepository } from '../../domain/repositories/event.repository.interface';
 import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
-import { EventResponse, EventTimelineResponse } from '@baby-tracker/shared-types';
+import {
+  EventResponse,
+  EventTimelineResponse,
+  TimelineEventResponse,
+} from '@baby-tracker/shared-types';
 import {
   BabyNotFoundException,
   ForbiddenBabyAccessException,
@@ -46,7 +50,7 @@ export class ListEventsUseCase {
     };
   }
 
-  private toResponse(event: Event): EventResponse {
+  private toResponse(event: Event): TimelineEventResponse {
     return {
       id: event.id,
       babyId: event.babyId,
@@ -56,6 +60,8 @@ export class ListEventsUseCase {
       createdBy: event.createdBy,
       createdAt: event.createdAt.toISOString(),
       updatedAt: event.updatedAt.toISOString(),
+      feed: event.feed,
+      diaper: event.diaper,
     };
   }
 }

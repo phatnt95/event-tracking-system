@@ -6,7 +6,14 @@ import {
 } from '../../domain/repositories/event.repository.interface';
 import { Event as EventEntity } from '../../domain/entities/event.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { EventType } from '@baby-tracker/shared-types';
+import {
+  DiaperStatus,
+  EventType,
+  FeedType,
+  PoopAmount,
+  PoopColor,
+  PoopConsistency,
+} from '@baby-tracker/shared-types';
 
 @Injectable()
 export class PrismaEventRepository implements IEventRepository {
@@ -21,6 +28,23 @@ export class PrismaEventRepository implements IEventRepository {
     createdBy: string;
     createdAt: Date;
     updatedAt: Date;
+    feedEvent?: {
+      feedType: string;
+      leftDuration: number | null;
+      rightDuration: number | null;
+      preparedVolume: number | null;
+      consumedVolume: number | null;
+      brand: string | null;
+      stage: string | null;
+    } | null;
+    diaperEvent?: {
+      status: string;
+      poopColor: string | null;
+      poopConsistency: string | null;
+      poopAmount: string | null;
+      hasBlood: boolean;
+      hasMucus: boolean;
+    } | null;
   }): EventEntity {
     return new EventEntity(
       db.id,
@@ -31,6 +55,27 @@ export class PrismaEventRepository implements IEventRepository {
       db.createdBy,
       db.createdAt,
       db.updatedAt,
+      db.feedEvent
+        ? {
+            feedType: db.feedEvent.feedType as FeedType,
+            leftDuration: db.feedEvent.leftDuration,
+            rightDuration: db.feedEvent.rightDuration,
+            preparedVolume: db.feedEvent.preparedVolume,
+            consumedVolume: db.feedEvent.consumedVolume,
+            brand: db.feedEvent.brand,
+            stage: db.feedEvent.stage,
+          }
+        : undefined,
+      db.diaperEvent
+        ? {
+            status: db.diaperEvent.status as DiaperStatus,
+            poopColor: db.diaperEvent.poopColor as PoopColor | null,
+            poopConsistency: db.diaperEvent.poopConsistency as PoopConsistency | null,
+            poopAmount: db.diaperEvent.poopAmount as PoopAmount | null,
+            hasBlood: db.diaperEvent.hasBlood,
+            hasMucus: db.diaperEvent.hasMucus,
+          }
+        : undefined,
     );
   }
 
@@ -93,6 +138,7 @@ export class PrismaEventRepository implements IEventRepository {
           : {}),
       },
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      include: { feedEvent: true, diaperEvent: true },
       ...(filter.cursor ? { cursor: { id: filter.cursor }, skip: 1 } : {}),
       take: pageSize + 1,
     });

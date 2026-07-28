@@ -8,10 +8,10 @@ import FeedFormModal from '../../../../components/FeedFormModal';
 import DiaperFormModal from '../../../../components/DiaperFormModal';
 import { apiFetch, getErrorMessage } from '../../../../lib/api';
 import {
-  EventResponse,
   EventTimelineResponse,
   EventType,
   BabyResponse,
+  TimelineEventResponse,
 } from '@baby-tracker/shared-types';
 import {
   Baby,
@@ -35,7 +35,7 @@ export default function BabyEventsPage() {
   const babyId = params?.id as string;
 
   const [baby, setBaby] = useState<BabyResponse | null>(null);
-  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [events, setEvents] = useState<TimelineEventResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -194,6 +194,8 @@ export default function BabyEventsPage() {
         return 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300';
     }
   };
+
+  const formatLabel = (value: string) => value.replaceAll('_', ' ').toLowerCase();
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans pb-16">
@@ -396,6 +398,99 @@ export default function BabyEventsPage() {
                           </button>
                         </div>
                       </div>
+
+                      {event.feed && (
+                        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                          <div>
+                            <dt className="inline text-neutral-400">Feed category: </dt>
+                            <dd className="inline font-medium">
+                              {formatLabel(event.feed.feedType)}
+                            </dd>
+                          </div>
+                          {event.feed.preparedVolume !== null && (
+                            <div>
+                              <dt className="inline text-neutral-400">Prepared: </dt>
+                              <dd className="inline font-medium">{event.feed.preparedVolume} ml</dd>
+                            </div>
+                          )}
+                          {event.feed.consumedVolume !== null && (
+                            <div>
+                              <dt className="inline text-neutral-400">Consumed: </dt>
+                              <dd className="inline font-medium">{event.feed.consumedVolume} ml</dd>
+                            </div>
+                          )}
+                          {(event.feed.leftDuration !== null ||
+                            event.feed.rightDuration !== null) && (
+                            <div>
+                              <dt className="inline text-neutral-400">Duration: </dt>
+                              <dd className="inline font-medium">
+                                {event.feed.leftDuration ?? 0}m left ·{' '}
+                                {event.feed.rightDuration ?? 0}m right
+                              </dd>
+                            </div>
+                          )}
+                          {event.feed.brand && (
+                            <div>
+                              <dt className="inline text-neutral-400">Brand: </dt>
+                              <dd className="inline font-medium">{event.feed.brand}</dd>
+                            </div>
+                          )}
+                          {event.feed.stage && (
+                            <div>
+                              <dt className="inline text-neutral-400">Stage: </dt>
+                              <dd className="inline font-medium">{event.feed.stage}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+
+                      {event.diaper && (
+                        <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                          <div>
+                            <dt className="inline text-neutral-400">Diaper status: </dt>
+                            <dd className="inline font-medium">
+                              {formatLabel(event.diaper.status)}
+                            </dd>
+                          </div>
+                          {event.diaper.poopColor && (
+                            <div>
+                              <dt className="inline text-neutral-400">Poop color: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopColor)}
+                              </dd>
+                            </div>
+                          )}
+                          {event.diaper.poopConsistency && (
+                            <div>
+                              <dt className="inline text-neutral-400">Consistency: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopConsistency)}
+                              </dd>
+                            </div>
+                          )}
+                          {event.diaper.poopAmount && (
+                            <div>
+                              <dt className="inline text-neutral-400">Amount: </dt>
+                              <dd className="inline font-medium">
+                                {formatLabel(event.diaper.poopAmount)}
+                              </dd>
+                            </div>
+                          )}
+                          {(event.diaper.hasBlood || event.diaper.hasMucus) && (
+                            <div>
+                              <dt className="inline text-neutral-400">Flags: </dt>
+                              <dd className="inline font-medium">
+                                {[
+                                  event.diaper.hasBlood ? 'Blood' : null,
+                                  event.diaper.hasMucus ? 'Mucus' : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(', ')}
+                              </dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
 
                       {event.note && (
                         <p className="text-xs text-neutral-700 dark:text-neutral-300 mt-2.5 pt-2 border-t border-[var(--border)]">
