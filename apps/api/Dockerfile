@@ -37,7 +37,7 @@ ENV NODE_ENV=production
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
-RUN pnpm install --prod
+RUN RUN pnpm install --prod --ignore-scripts
 RUN pnpm --filter api prisma:generate
 
 # Copy build artifacts and prisma schema
