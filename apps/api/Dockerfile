@@ -28,6 +28,7 @@ RUN pnpm install
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
+RUN pnpm --filter api prisma:generate
 RUN pnpm --filter api build
 
 # Stage 4: Production runner
@@ -37,6 +38,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
 RUN pnpm install --prod
+RUN pnpm --filter api prisma:generate
 
 # Copy build artifacts and prisma schema
 COPY --from=builder /usr/src/app/packages/shared-types/dist ./packages/shared-types/dist
@@ -44,4 +46,4 @@ COPY --from=builder /usr/src/app/apps/api/dist ./apps/api/dist
 COPY --from=builder /usr/src/app/apps/api/prisma ./apps/api/prisma
 
 EXPOSE 3000
-CMD ["pnpm", "--filter", "api", "start:prod"]
+CMD ["sh", "-c", "pnpm --filter api exec prisma migrate deploy && pnpm --filter api start:prod"]
