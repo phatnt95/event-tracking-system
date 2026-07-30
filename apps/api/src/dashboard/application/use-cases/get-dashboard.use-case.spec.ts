@@ -1,5 +1,5 @@
 import { GetDashboardUseCase } from './get-dashboard.use-case';
-import { DiaperStatus, FeedType } from '@baby-tracker/shared-types';
+import { DashboardDiaperChangeStatus, DiaperStatus, FeedType } from '@baby-tracker/shared-types';
 import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
 
 describe('GetDashboardUseCase', () => {
@@ -20,6 +20,11 @@ describe('GetDashboardUseCase', () => {
     dashboardRepository.getDailySummary.mockResolvedValue({
       feedCount: 3,
       milkIntakeMl: 620,
+      breastfeedingLeftDurationMinutes: 58,
+      breastfeedingRightDurationMinutes: 62,
+      breastfeedingTotalDurationMinutes: 120,
+      diaperChangeCount: 7,
+      diaperChangeStatus: DashboardDiaperChangeStatus.NORMAL,
       peeCount: 6,
       poopCount: 3,
       lastFeeding: {
@@ -40,6 +45,9 @@ describe('GetDashboardUseCase', () => {
     ).resolves.toMatchObject({
       date: '2026-07-30',
       milkIntakeMl: 620,
+      breastfeedingTotalDurationMinutes: 120,
+      diaperChangeCount: 7,
+      diaperChangeStatus: DashboardDiaperChangeStatus.NORMAL,
       peeCount: 6,
       poopCount: 3,
     });

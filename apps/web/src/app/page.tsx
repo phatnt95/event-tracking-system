@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import {
   BabyResponse,
+  DashboardDiaperChangeStatus,
   DashboardResponse,
   EventTimelineResponse,
   EventType,
@@ -93,6 +94,17 @@ function getEventBadgeColor(type: EventType): string {
       return 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50';
     case EventType.VACCINE:
       return 'bg-pink-50 text-pink-600 dark:bg-pink-950/30 dark:text-pink-400 border-pink-200/50';
+  }
+}
+
+function getDiaperStatusStyle(status: DashboardDiaperChangeStatus): string {
+  switch (status) {
+    case DashboardDiaperChangeStatus.NORMAL:
+      return 'text-emerald-600 dark:text-emerald-400';
+    case DashboardDiaperChangeStatus.CRITICAL:
+      return 'text-red-600 dark:text-red-400';
+    case DashboardDiaperChangeStatus.WARNING:
+      return 'text-amber-600 dark:text-amber-400';
   }
 }
 
@@ -316,14 +328,20 @@ export default function Home() {
               ) : dashboard ? (
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                   <DashboardCard
-                    label="Today's feeds"
-                    value={`${dashboard.feedCount}`}
-                    detail="records"
+                    label="Bottle milk"
+                    value={`${dashboard.milkIntakeMl} ml`}
+                    detail="formula & expressed milk"
                   />
                   <DashboardCard
-                    label="Milk intake"
-                    value={`${dashboard.milkIntakeMl} ml`}
-                    detail="bottle feeds"
+                    label="Breastfeeding"
+                    value={`${dashboard.breastfeedingTotalDurationMinutes} min`}
+                    detail={`Left ${dashboard.breastfeedingLeftDurationMinutes} · Right ${dashboard.breastfeedingRightDurationMinutes}`}
+                  />
+                  <DashboardCard
+                    label="Diaper changes"
+                    value={`${dashboard.diaperChangeCount}`}
+                    detail={humanize(dashboard.diaperChangeStatus)}
+                    valueClassName={getDiaperStatusStyle(dashboard.diaperChangeStatus)}
                   />
                   <DashboardCard label="Pee" value={`${dashboard.peeCount}`} detail="times" />
                   <DashboardCard label="Poop" value={`${dashboard.poopCount}`} detail="times" />
@@ -507,11 +525,23 @@ export default function Home() {
   );
 }
 
-function DashboardCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function DashboardCard({
+  label,
+  value,
+  detail,
+  valueClassName = '',
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  valueClassName?: string;
+}) {
   return (
     <article className="rounded-2xl border border-[var(--border)] bg-neutral-50/60 p-4 dark:bg-neutral-900/30">
       <p className="text-xs font-medium text-neutral-500">{label}</p>
-      <p className="mt-2 text-xl font-bold tracking-tight text-neutral-800 dark:text-white">
+      <p
+        className={`mt-2 text-xl font-bold tracking-tight text-neutral-800 dark:text-white ${valueClassName}`}
+      >
         {value}
       </p>
       <p className="mt-1 text-xs text-neutral-400">{detail}</p>

@@ -1,103 +1,96 @@
 # Dashboard Module (MVP)
 
-## Goal
-
-Provide parents with a quick overview of today's baby activities.
-
-The dashboard should summarize the most important daily metrics without requiring users to browse the timeline.
-
----
-
 ## Today's Summary
 
 ### 1. Total Milk Intake
 
 Description
 
-Display the total amount of milk consumed today.
+Display the total amount of milk consumed from bottle feeding today.
+
+Includes
+
+- Formula
+- Expressed Breast Milk
 
 Calculation
 
-- Sum of all bottle feeding volumes (Expressed Breast Milk + Formula)
-- Unit: ml
+Sum of consumedVolume (ml)
 
-Example
+Card
 
-```
-🍼 Milk Intake
+🍼 Bottle Milk
 
 620 ml
-```
 
 ---
 
-### 2. Total Pee Count
+### 2. Total Breastfeeding Duration
 
 Description
 
-Display the number of pee events recorded today.
+Display the total breastfeeding duration today.
 
 Calculation
 
-Count all diaper events where:
+Sum of all breastfeeding sessions.
 
-- Pee
-- Pee + Poop
+Display
+
+- Left Breast Total Duration
+- Right Breast Total Duration
+- Total Duration
 
 Example
 
-```
-💧 Pee
+🧑‍🍼 Breastfeeding
 
-6 Times
-```
+Left
+58 mins
+
+Right
+62 mins
+
+Total
+120 mins
+
+If only one side is recorded during a session, the other side is treated as 0 minutes.
 
 ---
 
-### 3. Total Poop Count
+### 3. Total Diaper Changes
 
 Description
 
-Display the number of poop events recorded today.
+Display the total diaper changes today.
 
-Calculation
+Includes
 
-Count all diaper events where:
-
+- Pee
 - Poop
 - Pee + Poop
 
-Example
+Expected Range
 
-```
-💩 Poop
+6–8 times/day
 
-3 Times
-```
+Status
 
----
-
-## Time Range
-
-Default
-
-Today
-
-Definition
-
-00:00:00 - 23:59:59 (User Local Time)
+| Count | Status   |
+| ----- | -------- |
+| < 6   | Warning  |
+| 6 - 8 | Normal   |
+| 9     | Warning  |
+| >=10  | Critical |
 
 ---
 
-## API
+### 4. Pee Count
 
-GET /dashboard/date=<today>
+Count diaper events that contain pee.
 
-Response
+---
 
-{
-"date": "2026-07-30",
-"milkIntakeMl": 620,
-"peeCount": 6,
-"poopCount": 3
-}
+### 5. Poop Count
+
+Count diaper events that contain poop.
