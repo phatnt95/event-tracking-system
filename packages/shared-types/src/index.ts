@@ -159,10 +159,21 @@ export interface DashboardLastDiaper {
   status: DiaperStatus;
 }
 
+export enum DashboardDiaperChangeStatus {
+  WARNING = 'WARNING',
+  NORMAL = 'NORMAL',
+  CRITICAL = 'CRITICAL',
+}
+
 export interface DashboardResponse {
   date: string;
   feedCount: number;
   milkIntakeMl: number;
+  breastfeedingLeftDurationMinutes: number;
+  breastfeedingRightDurationMinutes: number;
+  breastfeedingTotalDurationMinutes: number;
+  diaperChangeCount: number;
+  diaperChangeStatus: DashboardDiaperChangeStatus;
   peeCount: number;
   poopCount: number;
   lastFeeding: DashboardLastFeeding | null;
