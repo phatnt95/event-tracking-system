@@ -21,6 +21,8 @@ CMD ["pnpm", "--filter", "web", "dev"]
 
 # Stage 3: Build application
 FROM base AS builder
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/web/package.json ./apps/web/

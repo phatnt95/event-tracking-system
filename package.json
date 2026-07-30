@@ -14,7 +14,7 @@
     "build": "pnpm build:shared && pnpm build:api && pnpm build:web",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

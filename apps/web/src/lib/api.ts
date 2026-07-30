@@ -1,6 +1,9 @@
 import { TokenResponse } from '@baby-tracker/shared-types';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// NEXT_PUBLIC_* values are embedded in the browser bundle during `next build`.
+// Set this to the public Railway API URL when deploying (for example,
+// https://api-production-xxxx.up.railway.app/api).
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export class ApiError extends Error {
   constructor(
