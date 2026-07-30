@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Activity, Baby, ChevronRight, Clock, Droplets, Moon, Plus, Weight } from 'lucide-react';
 import {
   BabyResponse,
+  DashboardResponse,
   EventResponse,
   EventTimelineResponse,
   EventType,
@@ -29,16 +30,40 @@ function formatAge(birthday: string): string {
 }
 
 function eventLabel(type: EventType): string {
-  return type.charAt(0) + type.slice(1).toLowerCase();
+  return humanize(type);
+}
+
+function humanize(value: string): string {
+  return value
+    .split('_')
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getLocalDate(): string {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
+function formatTime(occurredAt: string): string {
+  return new Date(occurredAt).toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export default function Home() {
   const [babies, setBabies] = useState<BabyResponse[]>([]);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
   const [events, setEvents] = useState<EventResponse[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [isLoadingBabies, setIsLoadingBabies] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
 
   const selectedBaby = useMemo(
     () => babies.find((baby) => baby.id === selectedBabyId) ?? null,
@@ -76,6 +101,25 @@ export default function Home() {
     }
   }, []);
 
+  const loadDashboard = useCallback(async (babyId: string) => {
+    setIsLoadingDashboard(true);
+    setDashboardError(null);
+    try {
+      const params = new URLSearchParams({
+        babyId,
+        date: getLocalDate(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      const result = await apiFetch<DashboardResponse>(`/dashboard?${params.toString()}`);
+      setDashboard(result);
+    } catch (error: unknown) {
+      setDashboard(null);
+      setDashboardError(getErrorMessage(error, "Failed to load today's dashboard."));
+    } finally {
+      setIsLoadingDashboard(false);
+    }
+  }, []);
+
   useEffect(() => {
     void loadBabies();
   }, [loadBabies]);
@@ -83,10 +127,12 @@ export default function Home() {
   useEffect(() => {
     if (selectedBabyId) {
       void loadEvents(selectedBabyId);
+      void loadDashboard(selectedBabyId);
     } else {
       setEvents([]);
+      setDashboard(null);
     }
-  }, [loadEvents, selectedBabyId]);
+  }, [loadDashboard, loadEvents, selectedBabyId]);
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pb-12 transition-colors duration-200 font-sans">
@@ -194,6 +240,78 @@ export default function Home() {
 
           <div className="space-y-6 lg:col-span-2">
             <section className="rounded-3xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-sm">
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                    Today&apos;s summary
+                  </h2>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {selectedBaby
+                      ? `${selectedBaby.name}'s activity for today`
+                      : 'Select a baby to view activity'}
+                  </p>
+                </div>
+                <span className="text-xs text-neutral-400">{getLocalDate()}</span>
+              </div>
+
+              {isLoadingDashboard ? (
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <div
+                      key={index}
+                      className="h-28 animate-pulse rounded-2xl bg-neutral-100 dark:bg-neutral-900"
+                    />
+                  ))}
+                </div>
+              ) : dashboardError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+                  {dashboardError}
+                </p>
+              ) : !selectedBabyId ? (
+                <p className="text-sm text-neutral-500">
+                  Add or select a baby to see today&apos;s summary.
+                </p>
+              ) : dashboard ? (
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  <DashboardCard
+                    label="Today's feeds"
+                    value={`${dashboard.feedCount}`}
+                    detail="records"
+                  />
+                  <DashboardCard
+                    label="Milk intake"
+                    value={`${dashboard.milkIntakeMl} ml`}
+                    detail="bottle feeds"
+                  />
+                  <DashboardCard label="Pee" value={`${dashboard.peeCount}`} detail="times" />
+                  <DashboardCard label="Poop" value={`${dashboard.poopCount}`} detail="times" />
+                  <DashboardCard
+                    label="Last feeding"
+                    value={
+                      dashboard.lastFeeding ? formatTime(dashboard.lastFeeding.occurredAt) : '—'
+                    }
+                    detail={
+                      dashboard.lastFeeding
+                        ? humanize(dashboard.lastFeeding.feedType)
+                        : 'No feed today'
+                    }
+                  />
+                  <DashboardCard
+                    label="Last diaper"
+                    value={dashboard.lastDiaper ? formatTime(dashboard.lastDiaper.occurredAt) : '—'}
+                    detail={
+                      dashboard.lastDiaper
+                        ? humanize(dashboard.lastDiaper.status)
+                        : 'No diaper today'
+                    }
+                  />
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-500">No dashboard data is available yet.</p>
+              )}
+            </section>
+
+            <section className="rounded-3xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-sm">
               <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-neutral-500">
                 Log activity
               </h2>
@@ -280,5 +398,17 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+function DashboardCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <article className="rounded-2xl border border-[var(--border)] bg-neutral-50/60 p-4 dark:bg-neutral-900/30">
+      <p className="text-xs font-medium text-neutral-500">{label}</p>
+      <p className="mt-2 text-xl font-bold tracking-tight text-neutral-800 dark:text-white">
+        {value}
+      </p>
+      <p className="mt-1 text-xs text-neutral-400">{detail}</p>
+    </article>
   );
 }
