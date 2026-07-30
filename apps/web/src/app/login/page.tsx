@@ -23,7 +23,7 @@ export default function LoginPage() {
       });
       localStorage.setItem('accessToken', res.tokens.accessToken);
       localStorage.setItem('refreshToken', res.tokens.refreshToken);
-      window.location.href = '/babies';
+      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || 'Incorrect email or password');
     } finally {

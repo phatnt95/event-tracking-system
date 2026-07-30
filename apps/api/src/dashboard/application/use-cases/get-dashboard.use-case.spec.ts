@@ -1,0 +1,69 @@
+import { GetDashboardUseCase } from './get-dashboard.use-case';
+import { DiaperStatus, FeedType } from '@baby-tracker/shared-types';
+import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
+
+describe('GetDashboardUseCase', () => {
+  const dashboardRepository = {
+    getDailySummary: jest.fn(),
+  };
+  const babyRepository = {
+    findById: jest.fn(),
+  };
+  const useCase = new GetDashboardUseCase(
+    dashboardRepository,
+    babyRepository as unknown as IBabyRepository,
+  );
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    babyRepository.findById.mockResolvedValue({ ownerId: 'user-1' });
+    dashboardRepository.getDailySummary.mockResolvedValue({
+      feedCount: 3,
+      milkIntakeMl: 620,
+      peeCount: 6,
+      poopCount: 3,
+      lastFeeding: {
+        occurredAt: '2026-07-30T11:00:00.000Z',
+        feedType: FeedType.FORMULA,
+        consumedVolume: 120,
+      },
+      lastDiaper: {
+        occurredAt: '2026-07-30T10:30:00.000Z',
+        status: DiaperStatus.BOTH,
+      },
+    });
+  });
+
+  it('returns the summary for an owned baby using the requested local day', async () => {
+    await expect(
+      useCase.execute('baby-1', 'user-1', '2026-07-30', 'Asia/Ho_Chi_Minh'),
+    ).resolves.toMatchObject({
+      date: '2026-07-30',
+      milkIntakeMl: 620,
+      peeCount: 6,
+      poopCount: 3,
+    });
+
+    expect(dashboardRepository.getDailySummary).toHaveBeenCalledWith(
+      'baby-1',
+      new Date('2026-07-29T17:00:00.000Z'),
+      new Date('2026-07-30T17:00:00.000Z'),
+    );
+  });
+
+  it('rejects a dashboard request for a baby owned by someone else', async () => {
+    babyRepository.findById.mockResolvedValue({ ownerId: 'another-user' });
+
+    await expect(useCase.execute('baby-1', 'user-1', '2026-07-30', 'UTC')).rejects.toThrow(
+      'You do not have access permissions',
+    );
+    expect(dashboardRepository.getDailySummary).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid calendar dates before querying the repository', async () => {
+    await expect(useCase.execute('baby-1', 'user-1', '2026-02-30', 'UTC')).rejects.toThrow(
+      'date must be a valid calendar date',
+    );
+    expect(dashboardRepository.getDailySummary).not.toHaveBeenCalled();
+  });
+});

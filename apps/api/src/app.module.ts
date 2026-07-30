@@ -7,6 +7,7 @@ import { BabiesModule } from './babies/babies.module';
 import { EventsModule } from './events/events.module';
 import { FeedModule } from './feed/feed.module';
 import { DiaperModule } from './diaper/diaper.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -20,9 +21,8 @@ import { DiaperModule } from './diaper/diaper.module';
     EventsModule,
     FeedModule,
     DiaperModule,
+    DashboardModule,
   ],
   controllers: [AppController],
 })
 export class AppModule {}
-
-

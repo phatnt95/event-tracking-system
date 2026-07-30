@@ -148,6 +148,27 @@ export interface DiaperResponse extends EventResponse {
   hasMucus: boolean;
 }
 
+export interface DashboardLastFeeding {
+  occurredAt: string;
+  feedType: FeedType;
+  consumedVolume: number | null;
+}
+
+export interface DashboardLastDiaper {
+  occurredAt: string;
+  status: DiaperStatus;
+}
+
+export interface DashboardResponse {
+  date: string;
+  feedCount: number;
+  milkIntakeMl: number;
+  peeCount: number;
+  poopCount: number;
+  lastFeeding: DashboardLastFeeding | null;
+  lastDiaper: DashboardLastDiaper | null;
+}
+
 export interface AuthResponse {
   user: UserResponse;
   tokens: {
