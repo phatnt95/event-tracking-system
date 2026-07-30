@@ -39,6 +39,25 @@ export class GetDashboardUseCase {
     return this.toResponse(date, summary);
   }
 
+  getCurrentDate(timeZone = 'UTC'): string {
+    try {
+      const values = Object.fromEntries(
+        new Intl.DateTimeFormat('en-US', {
+          timeZone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        })
+          .formatToParts(new Date())
+          .filter((part) => part.type !== 'literal')
+          .map((part) => [part.type, part.value]),
+      );
+      return `${values.year}-${values.month}-${values.day}`;
+    } catch {
+      throw new BadRequestException('timeZone must be a valid IANA time zone');
+    }
+  }
+
   private getDayRange(date: string, timeZone: string): [Date, Date] {
     const [year, month, day] = date.split('-').map(Number);
     const parsedDate = new Date(Date.UTC(year, month - 1, day));

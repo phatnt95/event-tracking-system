@@ -2,14 +2,26 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Activity, Baby, ChevronRight, Clock, Droplets, Moon, Plus, Weight } from 'lucide-react';
+import {
+  Activity,
+  Baby,
+  ChevronRight,
+  Clock,
+  Droplets,
+  Moon,
+  Pill,
+  Plus,
+  Syringe,
+  TrendingUp,
+  Weight,
+} from 'lucide-react';
 import {
   BabyResponse,
   DashboardResponse,
-  EventResponse,
   EventTimelineResponse,
   EventType,
   Gender,
+  TimelineEventResponse,
 } from '@baby-tracker/shared-types';
 import Header from '../components/Header';
 import { apiFetch, getErrorMessage } from '../lib/api';
@@ -27,10 +39,6 @@ function formatAge(birthday: string): string {
   const years = Math.floor(months / 12);
   months %= 12;
   return `${years} year${years === 1 ? '' : 's'}${months ? ` ${months} mo` : ''}`;
-}
-
-function eventLabel(type: EventType): string {
-  return humanize(type);
 }
 
 function humanize(value: string): string {
@@ -54,10 +62,44 @@ function formatTime(occurredAt: string): string {
   });
 }
 
+function getEventIcon(type: EventType) {
+  switch (type) {
+    case EventType.FEED:
+      return <Droplets className="h-4 w-4 text-orange-500" />;
+    case EventType.DIAPER:
+      return <Activity className="h-4 w-4 text-emerald-500" />;
+    case EventType.SLEEP:
+      return <Moon className="h-4 w-4 text-indigo-500" />;
+    case EventType.MEDICINE:
+      return <Pill className="h-4 w-4 text-purple-500" />;
+    case EventType.GROWTH:
+      return <TrendingUp className="h-4 w-4 text-blue-500" />;
+    case EventType.VACCINE:
+      return <Syringe className="h-4 w-4 text-pink-500" />;
+  }
+}
+
+function getEventBadgeColor(type: EventType): string {
+  switch (type) {
+    case EventType.FEED:
+      return 'bg-orange-50 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400 border-orange-200/50';
+    case EventType.DIAPER:
+      return 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-200/50';
+    case EventType.SLEEP:
+      return 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-200/50';
+    case EventType.MEDICINE:
+      return 'bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400 border-purple-200/50';
+    case EventType.GROWTH:
+      return 'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400 border-blue-200/50';
+    case EventType.VACCINE:
+      return 'bg-pink-50 text-pink-600 dark:bg-pink-950/30 dark:text-pink-400 border-pink-200/50';
+  }
+}
+
 export default function Home() {
   const [babies, setBabies] = useState<BabyResponse[]>([]);
   const [selectedBabyId, setSelectedBabyId] = useState<string | null>(null);
-  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [events, setEvents] = useState<TimelineEventResponse[]>([]);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [isLoadingBabies, setIsLoadingBabies] = useState(true);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
@@ -351,46 +393,110 @@ export default function Home() {
             </section>
 
             <section className="rounded-3xl border border-[var(--border)] bg-[var(--card-bg)] p-6 shadow-sm">
-              <h2 className="mb-6 text-sm font-semibold uppercase tracking-wider text-neutral-500">
-                Recent timeline
-              </h2>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-neutral-500">
+                  Recent timeline
+                </h2>
+                {selectedBabyId && (
+                  <Link
+                    href={`/babies/${selectedBabyId}/events`}
+                    className="text-xs font-semibold text-[var(--primary)] hover:text-[var(--primary-hover)]"
+                  >
+                    View all
+                  </Link>
+                )}
+              </div>
               {isLoadingEvents ? (
                 <p className="text-sm text-neutral-500">Loading events…</p>
               ) : events.length === 0 ? (
                 <p className="text-sm text-neutral-500">No events recorded yet.</p>
               ) : (
                 <div className="relative ml-3 space-y-6 border-l border-[var(--border)] pl-6">
-                  {events.map((event) => (
-                    <article
-                      key={event.id}
-                      className="relative rounded-2xl border border-[var(--border)] bg-neutral-50/50 p-4 transition hover:border-[var(--primary)]/40 dark:bg-neutral-900/20"
-                    >
-                      <span
-                        className={`absolute -left-[33px] top-4 rounded-full border border-[var(--background)] p-1.5 ${event.type === EventType.FEED ? 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400'}`}
-                      >
-                        {event.type === EventType.FEED ? (
-                          <Droplets className="h-3.5 w-3.5" />
-                        ) : (
-                          <Activity className="h-3.5 w-3.5" />
+                  {events.map((event, index) => {
+                    const previous = events[index - 1];
+                    const isNewDate =
+                      !previous ||
+                      new Date(previous.occurredAt).toDateString() !==
+                        new Date(event.occurredAt).toDateString();
+
+                    return (
+                      <article key={event.id} className="relative">
+                        {isNewDate && (
+                          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                            {new Date(event.occurredAt).toLocaleDateString([], {
+                              weekday: 'long',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </p>
                         )}
-                      </span>
-                      <div className="mb-2 flex items-start justify-between gap-4">
-                        <strong className="text-sm">{eventLabel(event.type)}</strong>
-                        <span className="flex shrink-0 items-center text-xs text-neutral-400">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {new Date(event.occurredAt).toLocaleString([], {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
+                        <span className="absolute -left-[33px] top-1 rounded-full border border-[var(--background)] bg-[var(--card-bg)] p-1.5 shadow-sm">
+                          {getEventIcon(event.type)}
                         </span>
-                      </div>
-                      {event.note && (
-                        <p className="border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300">
-                          {event.note}
-                        </p>
-                      )}
-                    </article>
-                  ))}
+                        <div className="rounded-2xl border border-[var(--border)] bg-neutral-50/50 p-4 transition hover:border-[var(--primary)]/40 dark:bg-neutral-900/20">
+                          <div className="flex items-start justify-between gap-3">
+                            <span
+                              className={`rounded-full border px-2.5 py-0.5 text-xs font-bold ${getEventBadgeColor(event.type)}`}
+                            >
+                              {event.type}
+                            </span>
+                            <span className="flex shrink-0 items-center text-xs text-neutral-400">
+                              <Clock className="mr-1 h-3.5 w-3.5" />
+                              {new Date(event.occurredAt).toLocaleString([], {
+                                dateStyle: 'short',
+                                timeStyle: 'short',
+                              })}
+                            </span>
+                          </div>
+
+                          {event.feed && (
+                            <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                              <div>
+                                <dt className="inline text-neutral-400">Feed category: </dt>
+                                <dd className="inline font-medium">
+                                  {humanize(event.feed.feedType)}
+                                </dd>
+                              </div>
+                              {event.feed.consumedVolume !== null && (
+                                <div>
+                                  <dt className="inline text-neutral-400">Consumed: </dt>
+                                  <dd className="inline font-medium">
+                                    {event.feed.consumedVolume} ml
+                                  </dd>
+                                </div>
+                              )}
+                            </dl>
+                          )}
+
+                          {event.diaper && (
+                            <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                              <div>
+                                <dt className="inline text-neutral-400">Diaper status: </dt>
+                                <dd className="inline font-medium">
+                                  {humanize(event.diaper.status)}
+                                </dd>
+                              </div>
+                              {event.diaper.poopColor && (
+                                <div>
+                                  <dt className="inline text-neutral-400">Poop color: </dt>
+                                  <dd className="inline font-medium">
+                                    {humanize(event.diaper.poopColor)}
+                                  </dd>
+                                </div>
+                              )}
+                            </dl>
+                          )}
+
+                          {event.note && (
+                            <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-xs text-neutral-700 dark:text-neutral-300">
+                              {event.note}
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
             </section>

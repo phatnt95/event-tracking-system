@@ -66,4 +66,12 @@ describe('GetDashboardUseCase', () => {
     );
     expect(dashboardRepository.getDailySummary).not.toHaveBeenCalled();
   });
+
+  it('derives today using the requested time zone when no date is provided', () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-30T01:00:00.000Z'));
+
+    expect(useCase.getCurrentDate('America/Los_Angeles')).toBe('2026-07-29');
+
+    jest.useRealTimers();
+  });
 });

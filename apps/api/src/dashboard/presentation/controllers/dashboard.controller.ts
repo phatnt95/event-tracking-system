@@ -24,6 +24,8 @@ export class DashboardController {
     @CurrentUser('userId') ownerId: string,
     @Query() query: GetDashboardQueryDto,
   ): Promise<DashboardResponse> {
-    return this.getDashboardUseCase.execute(query.babyId, ownerId, query.date, query.timeZone);
+    const timeZone = query.timeZone ?? 'UTC';
+    const date = query.date ?? this.getDashboardUseCase.getCurrentDate(timeZone);
+    return this.getDashboardUseCase.execute(query.babyId, ownerId, date, timeZone);
   }
 }
