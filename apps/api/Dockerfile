@@ -8,10 +8,11 @@ WORKDIR /usr/src/app
 # Stage 2: Development dependencies
 FROM base AS development
 ENV NODE_ENV=development
+ENV CI=true
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
@@ -24,7 +25,7 @@ FROM base AS builder
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
@@ -37,7 +38,7 @@ ENV NODE_ENV=production
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/api/package.json ./apps/api/
-RUN pnpm install --prod --ignore-scripts
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 COPY --from=builder /usr/src/app/apps/api/prisma ./apps/api/prisma
 RUN pnpm --filter api prisma:generate

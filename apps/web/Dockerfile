@@ -8,10 +8,11 @@ WORKDIR /usr/src/app
 # Stage 2: Development dependencies
 FROM base AS development
 ENV NODE_ENV=development
+ENV CI=true
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/web/package.json ./apps/web/
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
@@ -26,7 +27,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/web/package.json ./apps/web/
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
@@ -38,7 +39,7 @@ ENV NODE_ENV=production
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY apps/web/package.json ./apps/web/
-RUN pnpm install --prod
+RUN pnpm install --prod --frozen-lockfile
 
 # Copy build artifacts
 COPY --from=builder /usr/src/app/packages/shared-types/dist ./packages/shared-types/dist
