@@ -110,6 +110,7 @@ export default function VaccinationsPage() {
     setError(null);
     try {
       const res = await apiFetch<BabyVaccinationsResponse>(`/babies/${babyId}/vaccinations`);
+      console.log(res);
       setData(res);
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to load vaccination schedule'));
