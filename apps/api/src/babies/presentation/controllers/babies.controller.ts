@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../../auth/infrastructure/guards/jwt-auth.guard
 import { CurrentUser } from '../../../auth/presentation/decorators/current-user.decorator';
 import { CreateBabyDto } from '../../application/dtos/create-baby.dto';
 import { UpdateBabyDto } from '../../application/dtos/update-baby.dto';
+import { SuccessResponseDto } from '../../../common/dtos/success-response.dto';
 import { CreateBabyUseCase } from '../../application/use-cases/create-baby.use-case';
 import { UpdateBabyUseCase } from '../../application/use-cases/update-baby.use-case';
 import { GetBabyUseCase } from '../../application/use-cases/get-baby.use-case';
@@ -79,14 +80,18 @@ export class BabiesController {
   @Post(':id/archive')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Archive a baby profile (soft delete)' })
-  @ApiResponse({ status: 200, description: 'Baby profile successfully archived.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Baby profile successfully archived.',
+    type: SuccessResponseDto,
+  })
   @ApiResponse({ status: 403, description: 'Access forbidden.' })
   @ApiResponse({ status: 404, description: 'Baby profile not found.' })
   async archive(
     @CurrentUser('userId') ownerId: string,
     @Param('id') id: string,
-  ): Promise<{ success: boolean }> {
+  ): Promise<SuccessResponseDto> {
     await this.archiveBabyUseCase.execute(id, ownerId);
-    return { success: true };
+    return { success: true, message: 'Baby profile archived successfully' };
   }
 }

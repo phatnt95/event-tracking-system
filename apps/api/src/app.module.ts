@@ -8,6 +8,7 @@ import { EventsModule } from './events/events.module';
 import { FeedModule } from './feed/feed.module';
 import { DiaperModule } from './diaper/diaper.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { VaccinationModule } from './vaccination/vaccination.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     FeedModule,
     DiaperModule,
     DashboardModule,
+    VaccinationModule,
   ],
   controllers: [AppController],
 })

@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
+import { Baby } from '@prisma/client';
 import { IBabyRepository } from '../../domain/repositories/baby.repository.interface';
 import { Baby as BabyEntity } from '../../domain/entities/baby.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -9,7 +9,7 @@ import { Gender } from '@baby-tracker/shared-types';
 export class PrismaBabyRepository implements IBabyRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapToEntity(dbBaby: any): BabyEntity {
+  private mapToEntity(dbBaby: Baby): BabyEntity {
     return new BabyEntity(
       dbBaby.id,
       dbBaby.ownerId,

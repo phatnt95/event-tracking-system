@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { User as UserEntity } from '../../domain/entities/user.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -8,7 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapToEntity(dbUser: any): UserEntity {
+  private mapToEntity(dbUser: User): UserEntity {
     return new UserEntity(
       dbUser.id,
       dbUser.email,

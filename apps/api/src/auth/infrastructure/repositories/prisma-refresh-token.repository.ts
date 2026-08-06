@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
+import { RefreshToken } from '@prisma/client';
 import { IRefreshTokenRepository } from '../../domain/repositories/refresh-token.repository.interface';
 import { RefreshToken as RefreshTokenEntity } from '../../domain/entities/refresh-token.entity';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -8,7 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 export class PrismaRefreshTokenRepository implements IRefreshTokenRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapToEntity(dbToken: any): RefreshTokenEntity {
+  private mapToEntity(dbToken: RefreshToken): RefreshTokenEntity {
     return new RefreshTokenEntity(
       dbToken.id,
       dbToken.token,

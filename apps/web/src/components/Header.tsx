@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Baby, LogOut, User, LayoutDashboard, Home as HomeIcon, Plus } from 'lucide-react';
+import { Baby, LogOut, User, LayoutDashboard, Home as HomeIcon, Plus, Syringe } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { apiFetch } from '../lib/api';
@@ -84,6 +84,18 @@ export default function Header() {
           </Link>
 
           <Link
+            href="/vaccinations"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+              isActive('/vaccinations')
+                ? 'bg-pink-50 text-pink-600 dark:bg-pink-950/20 font-semibold'
+                : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-neutral-800'
+            }`}
+          >
+            <Syringe className="h-4 w-4 text-pink-500" />
+            <span>Vaccinations</span>
+          </Link>
+
+          <Link
             href="/babies/new"
             className="hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)] transition-colors shadow-sm"
           >
@@ -123,4 +135,3 @@ export default function Header() {
     </header>
   );
 }
-

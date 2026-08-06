@@ -192,3 +192,61 @@ export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export enum VaccinationStatus {
+  PENDING = 'PENDING',
+  UPCOMING = 'UPCOMING',
+  COMPLETED = 'COMPLETED',
+  OVERDUE = 'OVERDUE',
+  SKIPPED = 'SKIPPED',
+  OPTIONAL = 'OPTIONAL',
+}
+
+export interface VaccinationRecordResponse {
+  id: string;
+  babyId: string;
+  vaccineName: string;
+  dose: string;
+  recommendedAgeMonths: number;
+  recommendedDate: string;
+  isOptional: boolean;
+  status: VaccinationStatus;
+  actualVaccinationDate?: string | null;
+  hospitalClinic?: string | null;
+  doctor?: string | null;
+  batchNumber?: string | null;
+  manufacturer?: string | null;
+  notes?: string | null;
+  eventId?: string | null;
+  overdueDays?: number;
+  remainingDays?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BabyVaccinationsResponse {
+  upcoming: VaccinationRecordResponse[];
+  completed: VaccinationRecordResponse[];
+  overdue: VaccinationRecordResponse[];
+  timeline: VaccinationRecordResponse[];
+}
+
+export interface CompleteVaccinationDto {
+  actualVaccinationDate: string;
+  hospitalClinic?: string;
+  doctor?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  notes?: string;
+}
+
+export interface UpdateVaccinationDto {
+  actualVaccinationDate?: string;
+  hospitalClinic?: string;
+  doctor?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  notes?: string;
+  status?: VaccinationStatus;
+  isOptional?: boolean;
+}
