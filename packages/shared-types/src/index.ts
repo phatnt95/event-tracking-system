@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -6,7 +5,7 @@ export interface ApiResponse<T> {
     statusCode: number;
     message: string;
     code?: string;
-    details?: any;
+    details?: unknown;
   };
   meta?: {
     timestamp: string;
@@ -117,9 +116,18 @@ export interface TimelineDiaperDetails {
   hasMucus: boolean;
 }
 
+export interface TimelineGrowthDetails {
+  weightKg: number;
+  heightCm?: number | null;
+  headCircumferenceCm?: number | null;
+  measuredBy?: string | null;
+  location?: string | null;
+}
+
 export interface TimelineEventResponse extends EventResponse {
   feed?: TimelineFeedDetails;
   diaper?: TimelineDiaperDetails;
+  growth?: TimelineGrowthDetails;
 }
 
 export interface EventTimelineResponse {
@@ -148,6 +156,35 @@ export interface DiaperResponse extends EventResponse {
   hasMucus: boolean;
 }
 
+export interface GrowthResponse extends EventResponse {
+  eventId: string;
+  weightKg: number;
+  measuredAt: string;
+  ageWeeks: number;
+  heightCm?: number | null;
+  headCircumferenceCm?: number | null;
+  measuredBy?: string | null;
+  location?: string | null;
+}
+
+export interface LatestGrowthResponse {
+  id: string;
+  weightKg: number;
+  measuredAt: string;
+  ageWeeks: number;
+}
+
+export interface GrowthRecordHistoryItem {
+  id: string;
+  eventId: string;
+  weightKg: number;
+  measuredAt: string;
+  ageWeeks: number;
+  heightCm?: number | null;
+  headCircumferenceCm?: number | null;
+  notes?: string;
+}
+
 export interface DashboardLastFeeding {
   occurredAt: string;
   feedType: FeedType;
@@ -165,6 +202,12 @@ export enum DashboardDiaperChangeStatus {
   CRITICAL = 'CRITICAL',
 }
 
+export interface DashboardGrowthSummary {
+  currentWeightKg: number;
+  lastMeasuredAt: string;
+  ageWeeks: number;
+}
+
 export interface DashboardResponse {
   date: string;
   feedCount: number;
@@ -178,6 +221,7 @@ export interface DashboardResponse {
   poopCount: number;
   lastFeeding: DashboardLastFeeding | null;
   lastDiaper: DashboardLastDiaper | null;
+  growth?: DashboardGrowthSummary | null;
 }
 
 export interface AuthResponse {
@@ -191,4 +235,62 @@ export interface AuthResponse {
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
+}
+
+export enum VaccinationStatus {
+  PENDING = 'PENDING',
+  UPCOMING = 'UPCOMING',
+  COMPLETED = 'COMPLETED',
+  OVERDUE = 'OVERDUE',
+  SKIPPED = 'SKIPPED',
+  OPTIONAL = 'OPTIONAL',
+}
+
+export interface VaccinationRecordResponse {
+  id: string;
+  babyId: string;
+  vaccineName: string;
+  dose: string;
+  recommendedAgeMonths: number;
+  recommendedDate: string;
+  isOptional: boolean;
+  status: VaccinationStatus;
+  actualVaccinationDate?: string | null;
+  hospitalClinic?: string | null;
+  doctor?: string | null;
+  batchNumber?: string | null;
+  manufacturer?: string | null;
+  notes?: string | null;
+  eventId?: string | null;
+  overdueDays?: number;
+  remainingDays?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BabyVaccinationsResponse {
+  upcoming: VaccinationRecordResponse[];
+  completed: VaccinationRecordResponse[];
+  overdue: VaccinationRecordResponse[];
+  timeline: VaccinationRecordResponse[];
+}
+
+export interface CompleteVaccinationDto {
+  actualVaccinationDate: string;
+  hospitalClinic?: string;
+  doctor?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  notes?: string;
+}
+
+export interface UpdateVaccinationDto {
+  actualVaccinationDate?: string;
+  hospitalClinic?: string;
+  doctor?: string;
+  manufacturer?: string;
+  batchNumber?: string;
+  notes?: string;
+  status?: VaccinationStatus;
+  isOptional?: boolean;
 }

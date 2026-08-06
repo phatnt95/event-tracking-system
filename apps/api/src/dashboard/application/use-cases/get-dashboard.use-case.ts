@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
-import { DashboardResponse } from '@baby-tracker/shared-types';
+import { DashboardResponse, DashboardGrowthSummary } from '@baby-tracker/shared-types';
 import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
 import {
   BabyNotFoundException,
@@ -9,6 +9,7 @@ import {
   DashboardSummary,
   IDashboardRepository,
 } from '../../domain/repositories/dashboard.repository.interface';
+import { IGrowthEventRepository } from '../../../growth/domain/repositories/growth-event.repository.interface';
 
 @Injectable()
 export class GetDashboardUseCase {
@@ -17,6 +18,8 @@ export class GetDashboardUseCase {
     private readonly dashboardRepository: IDashboardRepository,
     @Inject(IBabyRepository)
     private readonly babyRepository: IBabyRepository,
+    @Inject(IGrowthEventRepository)
+    private readonly growthRepository: IGrowthEventRepository,
   ) {}
 
   async execute(
@@ -34,9 +37,30 @@ export class GetDashboardUseCase {
     }
 
     const [from, to] = this.getDayRange(date, timeZone ?? 'UTC');
-    const summary = await this.dashboardRepository.getDailySummary(babyId, from, to);
+    const [summary, latestGrowth] = await Promise.all([
+      this.dashboardRepository.getDailySummary(babyId, from, to),
+      this.growthRepository.findLatestByBabyId(babyId),
+    ]);
 
-    return this.toResponse(date, summary);
+    let growthSummary: DashboardGrowthSummary | null = null;
+    if (latestGrowth && latestGrowth.event) {
+      const birthDate = new Date(baby.birthday);
+      const measuredDate = new Date(latestGrowth.event.occurredAt);
+      const ageWeeks = Math.max(
+        0,
+        Math.floor((measuredDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 7)),
+      );
+      growthSummary = {
+        currentWeightKg: latestGrowth.weightKg,
+        lastMeasuredAt: latestGrowth.event.occurredAt.toISOString(),
+        ageWeeks,
+      };
+    }
+
+    return {
+      ...this.toResponse(date, summary),
+      growth: growthSummary,
+    };
   }
 
   getCurrentDate(timeZone = 'UTC'): string {

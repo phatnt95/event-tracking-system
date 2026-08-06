@@ -3,6 +3,8 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { RegisterDto } from '../../application/dtos/register.dto';
 import { LoginDto } from '../../application/dtos/login.dto';
 import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
+import { ForgotPasswordDto } from '../../application/dtos/forgot-password.dto';
+import { SuccessResponseDto } from '../../../common/dtos/success-response.dto';
 import { RegisterUseCase } from '../../application/use-cases/register.use-case';
 import { LoginUseCase } from '../../application/use-cases/login.use-case';
 import { RefreshUseCase } from '../../application/use-cases/refresh.use-case';
@@ -53,10 +55,10 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout user by revoking refresh token' })
-  @ApiResponse({ status: 200, description: 'Successfully logged out.' })
-  async logout(@Body() dto: RefreshTokenDto): Promise<{ success: boolean }> {
+  @ApiResponse({ status: 200, description: 'Successfully logged out.', type: SuccessResponseDto })
+  async logout(@Body() dto: RefreshTokenDto): Promise<SuccessResponseDto> {
     await this.logoutUseCase.execute(dto.refreshToken);
-    return { success: true };
+    return { success: true, message: 'Logged out successfully' };
   }
 
   @Get('me')
@@ -72,13 +74,15 @@ export class AuthController {
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Placeholder for forgot password feature' })
-  @ApiResponse({ status: 200, description: 'Forgot password instructions sent if email exists.' })
-  async forgotPassword(
-    @Body('email') email: string,
-  ): Promise<{ success: boolean; message: string }> {
+  @ApiResponse({
+    status: 200,
+    description: 'Forgot password instructions sent if email exists.',
+    type: SuccessResponseDto,
+  })
+  async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<SuccessResponseDto> {
     return {
       success: true,
-      message: `If a user exists with email '${email}', a reset link has been dispatched.`,
+      message: `If a user exists with email '${dto.email}', a reset link has been dispatched.`,
     };
   }
 }

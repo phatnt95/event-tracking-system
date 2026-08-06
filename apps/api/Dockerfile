@@ -2,6 +2,7 @@
 FROM node:24-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+ENV CI=true
 RUN corepack enable
 WORKDIR /usr/src/app
 
@@ -15,6 +16,7 @@ RUN pnpm install
 
 COPY . .
 RUN pnpm --filter @baby-tracker/shared-types build
+RUN pnpm --filter api prisma:generate
 
 EXPOSE 3000
 CMD ["pnpm", "--filter", "api", "start:dev"]

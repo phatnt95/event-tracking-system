@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { CanActivate, ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { ITokenService } from '../../application/interfaces/token-service.interface';
@@ -21,7 +20,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const payload = await this.tokenService.verifyAccessToken(token);
       // Inject user payload into request context
-      (request as any).user = payload;
+      (request as Request & { user?: unknown }).user = payload;
     } catch {
       throw new InvalidTokenException('Session has expired or token is invalid');
     }

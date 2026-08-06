@@ -46,7 +46,7 @@ model RefreshToken {
 }
 
 model Baby {
-  id          String   @id @default(uuid())
+  id          String              @id @default(uuid())
   name        String
   nickname    String?
   gender      Gender
@@ -54,12 +54,13 @@ model Baby {
   birthWeight Float?
   birthHeight Float?
   note        String?
-  archived    Boolean  @default(false)
+  archived    Boolean             @default(false)
   ownerId     String
-  user        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   events      Event[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  vaccinations VaccinationRecord[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 }
 
 enum AuditAction {
@@ -103,21 +104,32 @@ enum PoopAmount {
   LARGE
 }
 
+enum VaccinationStatus {
+  PENDING
+  UPCOMING
+  COMPLETED
+  OVERDUE
+  SKIPPED
+  OPTIONAL
+}
+
 model Event {
-  id          String            @id @default(uuid())
-  babyId      String
-  baby        Baby              @relation(fields: [babyId], references: [id], onDelete: Cascade)
-  type        EventType
-  occurredAt  DateTime
-  note        String            @default("")
-  createdBy   String
-  creator     User              @relation(fields: [createdBy], references: [id])
-  feedEvent   FeedEvent?
-  diaperEvent DiaperEvent?
-  auditLogs   EventAuditLog[]
-  attachments EventAttachment[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  id                String             @id @default(uuid())
+  babyId            String
+  baby              Baby               @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  type              EventType
+  occurredAt        DateTime
+  note              String             @default("")
+  createdBy         String
+  creator           User               @relation(fields: [createdBy], references: [id])
+  feedEvent         FeedEvent?
+  diaperEvent       DiaperEvent?
+  growthEvent       GrowthEvent?
+  vaccinationRecord VaccinationRecord?
+  auditLogs         EventAuditLog[]
+  attachments       EventAttachment[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([babyId])
   @@index([babyId, type])
@@ -154,6 +166,44 @@ model DiaperEvent {
   updatedAt       DateTime         @updatedAt
 }
 
+model GrowthEvent {
+  id                  String   @id @default(uuid())
+  eventId             String   @unique
+  event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  weightKg            Float
+  heightCm            Float?
+  headCircumferenceCm Float?
+  measuredBy          String?
+  location            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model VaccinationRecord {
+  id                    String            @id @default(uuid())
+  babyId                String
+  baby                  Baby              @relation(fields: [babyId], references: [id], onDelete: Cascade)
+  vaccineName           String
+  dose                  String
+  recommendedAgeMonths  Float
+  recommendedDate       DateTime
+  isOptional            Boolean           @default(false)
+  status                VaccinationStatus @default(PENDING)
+  actualVaccinationDate DateTime?
+  hospitalClinic        String?
+  doctor                String?
+  batchNumber           String?
+  manufacturer          String?
+  notes                 String?
+  eventId               String?           @unique
+  event                 Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  @@index([babyId])
+  @@index([babyId, status])
+  @@index([recommendedDate])
+}
 
 model EventAuditLog {
   id          String      @id @default(uuid())
@@ -180,6 +230,7 @@ model EventAttachment {
 
   @@index([eventId])
 }
+
 
 
 

@@ -1,6 +1,7 @@
 import { GetDashboardUseCase } from './get-dashboard.use-case';
 import { DashboardDiaperChangeStatus, DiaperStatus, FeedType } from '@baby-tracker/shared-types';
 import { IBabyRepository } from '../../../babies/domain/repositories/baby.repository.interface';
+import { IGrowthEventRepository } from '../../../growth/domain/repositories/growth-event.repository.interface';
 
 describe('GetDashboardUseCase', () => {
   const dashboardRepository = {
@@ -9,9 +10,13 @@ describe('GetDashboardUseCase', () => {
   const babyRepository = {
     findById: jest.fn(),
   };
+  const growthRepository = {
+    findLatestByBabyId: jest.fn().mockResolvedValue(null),
+  };
   const useCase = new GetDashboardUseCase(
     dashboardRepository,
     babyRepository as unknown as IBabyRepository,
+    growthRepository as unknown as IGrowthEventRepository,
   );
 
   beforeEach(() => {

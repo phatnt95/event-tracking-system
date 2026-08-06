@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   DiaperStatus,
   EventType,
@@ -15,6 +16,8 @@ import {
 } from '../../domain/repositories/diaper-event.repository.interface';
 import { DiaperEvent } from '../../domain/entities/diaper-event.entity';
 import { Event as EventEntity } from '../../../events/domain/entities/event.entity';
+
+type DbDiaperWithEvent = Prisma.DiaperEventGetPayload<{ include: { event: true } }>;
 
 @Injectable()
 export class PrismaDiaperEventRepository implements IDiaperEventRepository {
@@ -106,28 +109,7 @@ export class PrismaDiaperEventRepository implements IDiaperEventRepository {
     await this.prisma.event.delete({ where: { id: eventId } });
   }
 
-  private mapToEntity(result: {
-    id: string;
-    eventId: string;
-    status: string;
-    hasBlood: boolean;
-    hasMucus: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-    poopColor: string | null;
-    poopConsistency: string | null;
-    poopAmount: string | null;
-    event: {
-      id: string;
-      babyId: string;
-      type: string;
-      occurredAt: Date;
-      note: string;
-      createdBy: string;
-      createdAt: Date;
-      updatedAt: Date;
-    };
-  }): DiaperEvent {
+  private mapToEntity(result: DbDiaperWithEvent): DiaperEvent {
     return new DiaperEvent(
       result.id,
       result.eventId,

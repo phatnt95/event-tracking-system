@@ -22,6 +22,7 @@ import { DeleteDiaperUseCase } from '../../application/use-cases/delete-diaper.u
 import { CreateDiaperDto } from '../../application/dtos/create-diaper.dto';
 import { UpdateDiaperDto } from '../../application/dtos/update-diaper.dto';
 import { ListDiapersQueryDto } from '../../application/dtos/list-diapers-query.dto';
+import { DiaperResponse } from '@baby-tracker/shared-types';
 
 @ApiTags('Diapers')
 @ApiBearerAuth()
@@ -44,7 +45,7 @@ export class DiaperController {
     @Param('babyId') babyId: string,
     @Body() dto: CreateDiaperDto,
     @CurrentUser('userId') ownerId: string,
-  ) {
+  ): Promise<DiaperResponse> {
     return this.createDiaperUseCase.execute(babyId, ownerId, dto);
   }
 
@@ -56,7 +57,7 @@ export class DiaperController {
     @Param('babyId') babyId: string,
     @CurrentUser('userId') ownerId: string,
     @Query() query: ListDiapersQueryDto,
-  ) {
+  ): Promise<DiaperResponse[]> {
     return this.listDiapersUseCase.execute(babyId, ownerId, query);
   }
 
@@ -70,7 +71,7 @@ export class DiaperController {
     @Param('babyId') babyId: string,
     @Param('id') id: string,
     @CurrentUser('userId') ownerId: string,
-  ) {
+  ): Promise<DiaperResponse> {
     return this.getDiaperUseCase.execute(babyId, id, ownerId);
   }
 
@@ -84,7 +85,7 @@ export class DiaperController {
     @Param('id') id: string,
     @CurrentUser('userId') ownerId: string,
     @Body() dto: UpdateDiaperDto,
-  ) {
+  ): Promise<DiaperResponse> {
     return this.updateDiaperUseCase.execute(babyId, id, ownerId, dto);
   }
 
@@ -96,7 +97,7 @@ export class DiaperController {
     @Param('babyId') babyId: string,
     @Param('id') id: string,
     @CurrentUser('userId') ownerId: string,
-  ) {
+  ): Promise<void> {
     await this.deleteDiaperUseCase.execute(babyId, id, ownerId);
   }
 }

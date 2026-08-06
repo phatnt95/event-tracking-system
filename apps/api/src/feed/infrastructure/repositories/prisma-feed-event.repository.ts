@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   CreateFeedParams,
   IFeedEventRepository,
@@ -11,11 +11,13 @@ import { Event as EventEntity } from '../../../events/domain/entities/event.enti
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EventType, FeedType } from '@baby-tracker/shared-types';
 
+type DbFeedWithEvent = Prisma.FeedEventGetPayload<{ include: { event: true } }>;
+
 @Injectable()
 export class PrismaFeedEventRepository implements IFeedEventRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  private mapToEntity(dbFeed: any): FeedEvent {
+  private mapToEntity(dbFeed: DbFeedWithEvent): FeedEvent {
     const baseEvent = new EventEntity(
       dbFeed.event.id,
       dbFeed.event.babyId,
@@ -107,10 +109,7 @@ export class PrismaFeedEventRepository implements IFeedEventRepository {
     return this.mapToEntity(dbFeed);
   }
 
-  async findByBaby(
-    babyId: string,
-    filter?: ListFeedsFilter,
-  ): Promise<FeedEvent[]> {
+  async findByBaby(babyId: string, filter?: ListFeedsFilter): Promise<FeedEvent[]> {
     const dbFeeds = await this.prisma.feedEvent.findMany({
       where: {
         event: {
