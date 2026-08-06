@@ -25,6 +25,7 @@ import {
   TimelineEventResponse,
 } from '@baby-tracker/shared-types';
 import Header from '../components/Header';
+import GrowthFormModal from '../components/GrowthFormModal';
 import { apiFetch, getErrorMessage } from '../lib/api';
 
 function formatAge(birthday: string): string {
@@ -118,6 +119,7 @@ export default function Home() {
   const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [isGrowthModalOpen, setIsGrowthModalOpen] = useState(false);
 
   const selectedBaby = useMemo(
     () => babies.find((baby) => baby.id === selectedBabyId) ?? null,
@@ -346,6 +348,28 @@ export default function Home() {
                   <DashboardCard label="Pee" value={`${dashboard.peeCount}`} detail="times" />
                   <DashboardCard label="Poop" value={`${dashboard.poopCount}`} detail="times" />
                   <DashboardCard
+                    label="Weight"
+                    value={
+                      dashboard.growth ? `${dashboard.growth.currentWeightKg.toFixed(2)} kg` : '—'
+                    }
+                    detail={
+                      dashboard.growth
+                        ? `Updated ${new Date(dashboard.growth.lastMeasuredAt).toLocaleDateString()}`
+                        : 'No weight logged'
+                    }
+                  />
+                  <DashboardCard
+                    label="Baby age"
+                    value={
+                      dashboard.growth
+                        ? `${dashboard.growth.ageWeeks} Weeks`
+                        : selectedBaby
+                          ? formatAge(selectedBaby.birthday)
+                          : '—'
+                    }
+                    detail="Auto-calculated"
+                  />
+                  <DashboardCard
                     label="Last feeding"
                     value={
                       dashboard.lastFeeding ? formatTime(dashboard.lastFeeding.occurredAt) : '—'
@@ -376,7 +400,17 @@ export default function Home() {
                 Log activity
               </h2>
               {selectedBabyId ? (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsGrowthModalOpen(true)}
+                    className="flex flex-col items-center justify-center rounded-2xl border border-transparent bg-blue-50 p-4 transition hover:border-blue-200 hover:bg-blue-100 dark:bg-blue-950/20"
+                  >
+                    <TrendingUp className="mb-2 h-6 w-6 text-blue-500" />
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+                      Growth / Weight
+                    </span>
+                  </button>
                   <Link
                     href={`/babies/${selectedBabyId}/events?type=${EventType.FEED}`}
                     className="flex flex-col items-center justify-center rounded-2xl border border-transparent bg-orange-50 p-4 transition hover:border-orange-200 hover:bg-orange-100 dark:bg-orange-950/20"
@@ -506,6 +540,23 @@ export default function Home() {
                             </dl>
                           )}
 
+                          {event.growth && (
+                            <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-1 border-t border-[var(--border)] pt-2 text-xs text-neutral-600 dark:text-neutral-300 sm:grid-cols-2">
+                              <div>
+                                <dt className="inline text-neutral-400">Weight: </dt>
+                                <dd className="inline font-bold text-blue-600 dark:text-blue-400">
+                                  {event.growth.weightKg.toFixed(2)} kg
+                                </dd>
+                              </div>
+                              {event.growth.heightCm && (
+                                <div>
+                                  <dt className="inline text-neutral-400">Height: </dt>
+                                  <dd className="inline font-medium">{event.growth.heightCm} cm</dd>
+                                </div>
+                              )}
+                            </dl>
+                          )}
+
                           {event.note && (
                             <p className="mt-2.5 border-t border-[var(--border)] pt-2 text-xs text-neutral-700 dark:text-neutral-300">
                               {event.note}
@@ -521,6 +572,17 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {isGrowthModalOpen && selectedBabyId && (
+        <GrowthFormModal
+          babyId={selectedBabyId}
+          onClose={() => setIsGrowthModalOpen(false)}
+          onSuccess={() => {
+            void loadEvents(selectedBabyId);
+            void loadDashboard(selectedBabyId);
+          }}
+        />
+      )}
     </div>
   );
 }

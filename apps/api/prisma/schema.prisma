@@ -124,6 +124,7 @@ model Event {
   creator           User               @relation(fields: [createdBy], references: [id])
   feedEvent         FeedEvent?
   diaperEvent       DiaperEvent?
+  growthEvent       GrowthEvent?
   vaccinationRecord VaccinationRecord?
   auditLogs         EventAuditLog[]
   attachments       EventAttachment[]
@@ -163,6 +164,19 @@ model DiaperEvent {
   hasMucus        Boolean          @default(false)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+}
+
+model GrowthEvent {
+  id                  String   @id @default(uuid())
+  eventId             String   @unique
+  event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  weightKg            Float
+  heightCm            Float?
+  headCircumferenceCm Float?
+  measuredBy          String?
+  location            String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 model VaccinationRecord {

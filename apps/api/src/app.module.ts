@@ -9,6 +9,7 @@ import { FeedModule } from './feed/feed.module';
 import { DiaperModule } from './diaper/diaper.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { VaccinationModule } from './vaccination/vaccination.module';
+import { GrowthModule } from './growth/growth.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { VaccinationModule } from './vaccination/vaccination.module';
     DiaperModule,
     DashboardModule,
     VaccinationModule,
+    GrowthModule,
   ],
   controllers: [AppController],
 })

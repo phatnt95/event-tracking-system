@@ -1,20 +1,29 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Baby, LogOut, User, LayoutDashboard, Home as HomeIcon, Plus, Syringe } from 'lucide-react';
+import {
+  Baby,
+  LogOut,
+  User,
+  LayoutDashboard,
+  Home as HomeIcon,
+  Plus,
+  Syringe,
+  TrendingUp,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UserResponse } from '@baby-tracker/shared-types';
 import { apiFetch } from '../lib/api';
 
 export default function Header() {
   const pathname = usePathname();
-  const [profile, setProfile] = useState<{ displayName: string; email: string } | null>(null);
+  const [profile, setProfile] = useState<UserResponse | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const user = await apiFetch<any>('/auth/me');
+        const user = await apiFetch<UserResponse>('/auth/me');
         setProfile(user);
       } catch (err) {
         console.error('Failed to load profile', err);
@@ -41,7 +50,7 @@ export default function Header() {
     }
   };
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => pathname === path || pathname.startsWith(`${path}/`);
 
   return (
     <header className="sticky top-0 z-10 backdrop-blur-md bg-[var(--background)]/80 border-b border-[var(--border)] px-4 py-4 md:px-8">
@@ -62,7 +71,7 @@ export default function Header() {
           <Link
             href="/"
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
-              isActive('/')
+              pathname === '/'
                 ? 'bg-orange-50 text-[var(--primary)] dark:bg-orange-950/20 font-semibold'
                 : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-neutral-800'
             }`}
@@ -81,6 +90,18 @@ export default function Header() {
           >
             <LayoutDashboard className="h-4 w-4" />
             <span>Babies</span>
+          </Link>
+
+          <Link
+            href="/growth"
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+              isActive('/growth')
+                ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 font-semibold'
+                : 'text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-neutral-800'
+            }`}
+          >
+            <TrendingUp className="h-4 w-4 text-blue-500" />
+            <span>Growth</span>
           </Link>
 
           <Link
